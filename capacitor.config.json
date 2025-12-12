@@ -1,0 +1,6 @@
+{
+  "appId": "com.altitude.timesheets",
+  "appName": "Employee Timesheets",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" }
+}
