@@ -1,9 +1,5 @@
 {
   "appId": "com.altitude.timesheets",
   "appName": "employee-timesheets",
-  "webDir": "dist",
-  "server": {
-    "url": "http://192.168.0.34:5173",
-    "cleartext": true
-  }
+  "webDir": "dist"
 }

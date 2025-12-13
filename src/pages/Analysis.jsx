@@ -134,7 +134,7 @@ export default function Analysis() {
     }, [items]);
 
     return (
-        <div className="mx-auto max-w-5xl px-4 py-4">
+        <div className="mx-auto max-w-5xl px-4 py-4 pb-48">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <div className="text-xl font-extrabold">Analysis</div>

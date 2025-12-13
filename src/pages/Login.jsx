@@ -39,7 +39,7 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-[70vh] px-4 pt-10">
+        <div className="min-h-[70vh] px-4 pt-10 pb-48">
             <div className="mx-auto max-w-sm">
                 <Card>
                     <CardHeader>

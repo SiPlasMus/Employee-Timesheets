@@ -134,7 +134,7 @@ export default function Timesheet() {
     }, [filteredItems]);
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-4">
+        <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
             <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <div>
                     <div className="mb-1 text-sm font-semibold text-slate-600">Search memo</div>

@@ -79,7 +79,7 @@ export default function Profile({ onLogout }) {
     }, [me]);
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-4">
+        <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
             <Card>
                 <CardHeader>
                     <div className="flex items-start justify-between gap-3">

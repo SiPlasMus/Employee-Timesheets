@@ -162,7 +162,7 @@ export default function AddLine() {
     }
 
     return (
-        <div className="mx-auto max-w-3xl px-4 py-4">
+        <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
             <Card>
                 <CardHeader>
                     <div className="text-xl font-extrabold">Add Timesheet Entry</div>

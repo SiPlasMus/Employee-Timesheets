@@ -16,12 +16,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+          storeFile file(project.findProperty("TIMESHEETS_STORE_FILE") ?: "timesheets-release.keystore")
+          storePassword project.findProperty("TIMESHEETS_STORE_PASSWORD") ?: ""
+          keyAlias project.findProperty("TIMESHEETS_KEY_ALIAS") ?: "timesheets"
+          keyPassword project.findProperty("TIMESHEETS_KEY_PASSWORD") ?: ""
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            shrinkResources false
         }
     }
+
+
 }
 
 repositories {
