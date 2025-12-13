@@ -1,6 +1,9 @@
 {
   "appId": "com.altitude.timesheets",
-  "appName": "Employee Timesheets",
+  "appName": "employee-timesheets",
   "webDir": "dist",
-  "server": { "androidScheme": "https" }
+  "server": {
+    "url": "http://192.168.0.34:5173",
+    "cleartext": true
+  }
 }
