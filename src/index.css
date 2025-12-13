@@ -2,11 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* app defaults */
 :root {
     color-scheme: light;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     @apply bg-slate-50 text-slate-900;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Optional: if you want that blue background only behind app */
+.app-shell {
+    @apply min-h-screen bg-blue-950;
+}
+
+/* Better tap feeling on mobile */
+button, a {
+    -webkit-tap-highlight-color: transparent;
 }
