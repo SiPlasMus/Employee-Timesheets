@@ -16,6 +16,10 @@ function ymdFromSap(dt) {
     return String(dt || "").slice(0, 10);
 }
 
+function fmtHours(mins) {
+    return (Number(mins || 0) / 60).toFixed(2);
+}
+
 function sapIntToMinutes(v) {
     const n = Number(v);
     if (!Number.isFinite(n)) return 0;
@@ -25,15 +29,56 @@ function sapIntToMinutes(v) {
     return hh * 60 + mm;
 }
 
-function minutesBetweenSapTimes(st, en) {
-    const a = sapIntToMinutes(st);
-    const b = sapIntToMinutes(en);
+// "00:15:00" -> 15, "0:15:00" -> 15, null -> 0
+function breakToMinutes(v) {
+    if (v == null) return 0;
+
+    // if backend ever returns numeric-like, accept it as minutes
+    if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, v);
+
+    const s = String(v).trim();
+    // support "HH:MM:SS" or "MM:SS" edge cases
+    const parts = s.split(":").map((x) => Number(x));
+    if (parts.some((x) => !Number.isFinite(x))) return 0;
+
+    if (parts.length === 3) {
+        const [hh, mm, ss] = parts;
+        return Math.max(0, hh * 60 + mm + (ss >= 30 ? 1 : 0));
+    }
+    if (parts.length === 2) {
+        const [mm, ss] = parts;
+        return Math.max(0, mm + (ss >= 30 ? 1 : 0));
+    }
+    return 0;
+}
+
+function minutesBetweenSapTimes(startInt, endInt) {
+    const a = sapIntToMinutes(startInt);
+    const b = sapIntToMinutes(endInt);
     return Math.max(0, b - a);
 }
 
-function fmtHours(mins) {
-    return (Number(mins || 0) / 60).toFixed(2);
+function calcLineMins(row) {
+    const gross = minutesBetweenSapTimes(row.StartTime, row.EndTime);
+    const br = breakToMinutes(row.Break); // from HANA select: L."Break"
+    const net = Math.max(0, gross - br);
+    return { gross, breakMins: br, net };
 }
+
+function fmtHoursSmart(mins) {
+    const h = Number(mins || 0) / 60;
+    const rounded = Math.round(h * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+function fmtBreak(mins) {
+    const m = Math.max(0, Number(mins || 0));
+    const hh = Math.floor(m / 60);
+    const mm = m % 60;
+    if (hh <= 0) return `${mm} min`;
+    return `${hh}:${String(mm).padStart(2, "0")}`;
+}
+
 
 export default function Analysis() {
     const [month, setMonth] = useState(yyyymm());
@@ -81,10 +126,16 @@ export default function Analysis() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [month]);
 
-    const totalMins = useMemo(() => {
+    const totals = useMemo(() => {
         return items.reduce(
-            (sum, r) => sum + minutesBetweenSapTimes(r.StartTime, r.EndTime),
-            0
+            (acc, r) => {
+                const { gross, breakMins, net } = calcLineMins(r);
+                acc.gross += gross;
+                acc.breaks += breakMins;
+                acc.net += net;
+                return acc;
+            },
+            { gross: 0, breaks: 0, net: 0 }
         );
     }, [items]);
 
@@ -92,7 +143,8 @@ export default function Analysis() {
         const map = new Map(); // actType -> minutes
         for (const r of items) {
             const key = String(r.ActType ?? "");
-            const mins = minutesBetweenSapTimes(r.StartTime, r.EndTime);
+            const { net } = calcLineMins(r);
+            const mins = net;
             map.set(key, (map.get(key) || 0) + mins);
         }
         return Array.from(map.entries())
@@ -109,7 +161,8 @@ export default function Analysis() {
         for (const r of items) {
             const key = String(r.CostCenter || "");
             if (!key) continue;
-            const mins = minutesBetweenSapTimes(r.StartTime, r.EndTime);
+            const { net } = calcLineMins(r);
+            const mins = net;
             map.set(key, (map.get(key) || 0) + mins);
         }
         return Array.from(map.entries())
@@ -125,7 +178,8 @@ export default function Analysis() {
         const map = new Map(); // date -> minutes
         for (const r of items) {
             const d = ymdFromSap(r.Date);
-            const mins = minutesBetweenSapTimes(r.StartTime, r.EndTime);
+            const { net } = calcLineMins(r);
+            const mins = net;
             map.set(d, (map.get(d) || 0) + mins);
         }
         return Array.from(map.entries())
@@ -168,8 +222,11 @@ export default function Analysis() {
                 <Card>
                     <CardHeader>
                         <div className="text-sm text-slate-500">Total hours</div>
-                        <div className="text-2xl font-extrabold">⏱ {fmtHours(totalMins)}h</div>
+                        <div className="text-2xl font-extrabold">⏱ {fmtHoursSmart(totals.net)}h</div>
                     </CardHeader>
+                    <CardContent>
+                        <div className="text-sm text-slate-600">Breaks: {fmtBreak(totals.breaks)}</div>
+                    </CardContent>
                     <CardContent>
                         <div className="text-sm text-slate-600">Entries: {items.length}</div>
                     </CardContent>

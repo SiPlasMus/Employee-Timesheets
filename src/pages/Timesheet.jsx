@@ -26,21 +26,102 @@ function ymdFromSap(v) {
 }
 
 // duration minutes from start/end ints like 1530 -> 17:00
-function minutesBetweenSapTimes(startInt, endInt) {
-    const toMin = (x) => {
-        const s = String(Math.max(0, Number(x) || 0)).padStart(4, "0");
-        const hh = Number(s.slice(0, 2));
-        const mm = Number(s.slice(2, 4));
-        return hh * 60 + mm;
-    };
-    const a = toMin(startInt);
-    const b = toMin(endInt);
-    return Math.max(0, b - a);
-}
 
 function fmtHours(mins) {
     const h = mins / 60;
     return h.toFixed(h % 1 === 0 ? 0 : 2);
+}
+
+function sapIntToMinutes(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    const s = String(Math.max(0, n)).padStart(4, "0");
+    const hh = Number(s.slice(0, 2));
+    const mm = Number(s.slice(2, 4));
+    return hh * 60 + mm;
+}
+
+function minutesBetweenSapTimes(startInt, endInt) {
+    const a = sapIntToMinutes(startInt);
+    const b = sapIntToMinutes(endInt);
+    return Math.max(0, b - a);
+}
+
+function calcLineMins(row) {
+    const gross = minutesBetweenSapTimes(row.StartTime, row.EndTime);
+    const br = breakToMinutes(row.Break); // from HANA select: L."Break"
+    const net = Math.max(0, gross - br);
+    return { gross, breakMins: br, net };
+}
+
+function fmtHoursSmart(mins) {
+    const h = Number(mins || 0) / 60;
+    const rounded = Math.round(h * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
+}
+
+function fmtBreak(mins) {
+    const m = Math.max(0, Number(mins || 0));
+    const hh = Math.floor(m / 60);
+    const mm = m % 60;
+    if (hh <= 0) return `${mm} min`;
+    return `${hh}:${String(mm).padStart(2, "0")}`;
+}
+
+// "14:00" -> 1400 (for prefill from SAP ints)
+function sapIntToHHmm(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "";
+    const s = String(Math.max(0, n)).padStart(4, "0");
+    return `${s.slice(0, 2)}:${s.slice(2, 4)}`;
+}
+
+// Break from HANA line: "00:10:00" -> 10
+function breakToMinutes(v) {
+    if (v == null) return 0;
+
+    // If SAP/HANA gives numeric like 100, 110 (HHMM), convert properly
+    if (typeof v === "number" && Number.isFinite(v)) {
+        const n = Math.max(0, v);
+
+        // Heuristic: if it's <= 2359 and looks like HHMM, parse as time-of-day
+        // This will fix 100 -> 60 mins, 110 -> 70 mins.
+        if (n <= 2359) {
+            const s = String(Math.floor(n)).padStart(4, "0");
+            const hh = Number(s.slice(0, 2));
+            const mm = Number(s.slice(2, 4));
+            if (hh <= 23 && mm <= 59) return hh * 60 + mm;
+        }
+
+        // otherwise treat as minutes
+        return Math.max(0, Math.floor(n));
+    }
+
+    const s = String(v).trim();
+
+    // If numeric string like "100" -> handle HHMM
+    if (/^\d{1,4}$/.test(s)) {
+        const n = Number(s);
+        const ss = String(n).padStart(4, "0");
+        const hh = Number(ss.slice(0, 2));
+        const mm = Number(ss.slice(2, 4));
+        if (hh <= 23 && mm <= 59) return hh * 60 + mm;
+        return n;
+    }
+
+    // "HH:MM:SS"
+    const parts = s.split(":").map((x) => Number(x));
+    if (parts.some((x) => !Number.isFinite(x))) return 0;
+
+    if (parts.length === 3) {
+        const [hh, mm, ss] = parts;
+        return Math.max(0, hh * 60 + mm + (ss >= 30 ? 1 : 0));
+    }
+    if (parts.length === 2) {
+        const [mm, ss] = parts;
+        return Math.max(0, mm + (ss >= 30 ? 1 : 0));
+    }
+    return 0;
 }
 
 export default function Timesheet() {
@@ -57,6 +138,20 @@ export default function Timesheet() {
     const [q, setQ] = useState("");                 // memo search
     const [actFilter, setActFilter] = useState("all"); // activity type id or "all"
     const [ccFilter, setCcFilter] = useState("all");   // cost center code or "all"
+
+    const [editOpen, setEditOpen] = useState(false);
+    const [editRow, setEditRow] = useState(null);
+
+    const [editStart, setEditStart] = useState("");
+    const [editEnd, setEditEnd] = useState("");
+    const [editBreakMin, setEditBreakMin] = useState(0);
+    const [editActType, setEditActType] = useState("");
+    const [editCC, setEditCC] = useState("");
+    const [editMemo, setEditMemo] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [editErr, setEditErr] = useState("");
+
+    const [busy, setBusy] = useState({ on: false, text: "" });
 
     useEffect(() => {
         (async () => {
@@ -129,9 +224,81 @@ export default function Timesheet() {
         return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
     }, [filteredItems]);
 
-    const totalMins = useMemo(() => {
-        return filteredItems.reduce((sum, r) => sum + minutesBetweenSapTimes(r.StartTime, r.EndTime), 0);
+    const totals = useMemo(() => {
+        return filteredItems.reduce(
+            (acc, r) => {
+                const { gross, breakMins, net } = calcLineMins(r);
+                acc.gross += gross;
+                acc.breaks += breakMins;
+                acc.net += net;
+                return acc;
+            },
+            { gross: 0, breaks: 0, net: 0 }
+        );
     }, [filteredItems]);
+
+    function openEdit(r) {
+        setEditErr("");
+        setEditRow(r);
+
+        setEditStart(sapIntToHHmm(r.StartTime));
+        setEditEnd(sapIntToHHmm(r.EndTime));
+        setEditBreakMin(breakToMinutes(r.Break));
+        setEditActType(String(r.ActType ?? ""));
+        setEditCC(String(r.CostCenter ?? ""));
+        setEditMemo(String(r.U_memo ?? ""));
+
+        setEditOpen(true);
+    }
+
+    async function saveEdit() {
+        if (!editRow) return;
+        setEditErr("");
+
+        // tiny validations
+        if (!/^\d{2}:\d{2}$/.test(editStart)) return setEditErr("Start time must be HH:mm");
+        if (!/^\d{2}:\d{2}$/.test(editEnd)) return setEditErr("End time must be HH:mm");
+        if (!editActType || isNaN(Number(editActType))) return setEditErr("Activity type is required");
+
+        setSaving(true);
+        setBusy({ on: true, text: "Saving..." });
+        try {
+            await api.patch(`/timesheet/line/${editRow.LineID}`, {
+                month,
+                startTime: editStart,
+                endTime: editEnd,
+                breakMin: Number(editBreakMin || 0),
+                activityType: Number(editActType),
+                costCenter: editCC || null,
+                memo: editMemo || null,
+                // you can also send other fields later if you want
+            });
+
+            setEditOpen(false);
+            setEditRow(null);
+            await load(); // refresh list from HANA
+        } catch (e) {
+            setEditErr(e?.response?.data?.error || e?.response?.data?.details || e.message || "Save failed");
+        } finally {
+            setSaving(false);
+            setBusy({ on: false, text: "" });
+        }
+    }
+
+    async function deleteLine(r) {
+        const ok = window.confirm("Delete this entry?");
+        if (!ok) return;
+        setBusy({ on: true, text: "Deleting..." });
+
+        try {
+            await api.delete(`/timesheet/line/${r.LineID}`, { params: { month } });
+            await load();
+        } catch (e) {
+            alert(e?.response?.data?.error || e?.response?.data?.details || e.message || "Delete failed");
+        } finally {
+            setBusy({ on: false, text: "" });
+        }
+    }
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
@@ -224,7 +391,10 @@ export default function Timesheet() {
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <div className="rounded-full bg-slate-900 text-white px-3 py-1 font-semibold">
-                            ⏱ Total: {fmtHours(totalMins)} soat
+                            ⏱ Total: {fmtHours(totals.net)} soat
+                        </div>
+                        <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold">
+                            ☕ Breaks: {fmtBreak(totals.breaks)}
                         </div>
                         <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold">
                             🧾 {filteredItems.length} / {items.length} entries
@@ -241,21 +411,29 @@ export default function Timesheet() {
                         <div className="grid gap-3">
                             {grouped.map(([date, rows]) => {
                                 const dayMins = rows.reduce(
-                                    (s, r) => s + minutesBetweenSapTimes(r.StartTime, r.EndTime),
-                                    0
+                                    (acc, r) => {
+                                        const { gross, breakMins, net } = calcLineMins(r);
+                                        acc.gross += gross;
+                                        acc.breaks += breakMins;
+                                        acc.net += net;
+                                        return acc;
+                                    },
+                                    { gross: 0, breaks: 0, net: 0 }
                                 );
+
                                 return (
                                     <div key={date} className="rounded-2xl border border-slate-200 p-3">
                                         <div className="flex items-center justify-between">
                                             <div className="font-extrabold">{date}</div>
                                             <div className="text-sm font-semibold text-slate-700">
-                                                🕒{fmtHours(dayMins)} soat
+                                                🕒{fmtHours(dayMins.net)} soat
+                                                <span className="ml-2 text-slate-500">☕ {fmtBreak(dayMins.breaks)}</span>
                                             </div>
                                         </div>
 
                                         <div className="mt-2 grid gap-2">
                                             {rows.map((r) => {
-                                                const mins = minutesBetweenSapTimes(r.StartTime, r.EndTime);
+                                                const { gross, breakMins, net } = calcLineMins(r);
                                                 return (
                                                     <div
                                                         key={r.LineID}
@@ -266,7 +444,10 @@ export default function Timesheet() {
                                                                 🕒{hhmmFromSapInt(r.StartTime)}–{hhmmFromSapInt(r.EndTime)}
                                                             </div>
                                                             <div className="text-sm text-slate-600">
-                                                                🕒{fmtHours(mins)}soat
+                                                                ⏱ {fmtHoursSmart(net)} soat
+                                                                {breakMins > 0 && (
+                                                                    <span className="ml-2 text-slate-500">☕ {fmtBreak(breakMins)}</span>
+                                                                )}
                                                             </div>
 
                                                             {r.CostCenter && (
@@ -279,8 +460,26 @@ export default function Timesheet() {
                                                                 </div>
                                                             )}
 
-                                                            <div className="ml-auto text-xs text-slate-500">
-                                                                📌{actMap.get(Number(r.ActType)) || `ActType: ${r.ActType ?? "-"}`}
+                                                            <div className="ml-auto flex items-center gap-2">
+                                                                <div className="text-xs text-slate-500">
+                                                                    📌{actMap.get(Number(r.ActType)) || `ActType: ${r.ActType ?? "-"}`}
+                                                                </div>
+
+                                                                <button
+                                                                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                                                    onClick={() => openEdit(r)}
+                                                                    title="Edit"
+                                                                >
+                                                                    ✏️ Edit
+                                                                </button>
+
+                                                                <button
+                                                                    className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                                                                    onClick={() => deleteLine(r)}
+                                                                    title="Delete"
+                                                                >
+                                                                    🗑 Delete
+                                                                </button>
                                                             </div>
                                                         </div>
 
@@ -300,6 +499,108 @@ export default function Timesheet() {
                     )}
                 </CardContent>
             </Card>
+
+            {editOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+                        <div className="flex items-center justify-between">
+                            <div className="text-lg font-extrabold">Edit entry</div>
+                            <button
+                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold"
+                                onClick={() => setEditOpen(false)}
+                            >
+                                ✖
+                            </button>
+                        </div>
+
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            <div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600">Start</div>
+                                <Input value={editStart} onChange={(e) => setEditStart(e.target.value)} placeholder="HH:mm" />
+                            </div>
+
+                            <div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600">End</div>
+                                <Input value={editEnd} onChange={(e) => setEditEnd(e.target.value)} placeholder="HH:mm" />
+                            </div>
+
+                            <div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600">Break (minutes)</div>
+                                <Input
+                                    type="number"
+                                    value={editBreakMin}
+                                    onChange={(e) => setEditBreakMin(Number(e.target.value || 0))}
+                                    min={0}
+                                />
+                            </div>
+
+                            <div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600">Activity type</div>
+                                <select
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    value={editActType}
+                                    onChange={(e) => setEditActType(e.target.value)}
+                                >
+                                    <option value="">Select…</option>
+                                    {ACTIVITY_TYPES.map((t) => (
+                                        <option key={t.id} value={String(t.id)}>
+                                            {t.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <div className="mb-1 text-sm font-semibold text-slate-600">Cost center</div>
+                                <select
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    value={editCC}
+                                    onChange={(e) => setEditCC(e.target.value)}
+                                >
+                                    <option value="">— None —</option>
+                                    {[...ccMap.entries()].map(([code, name]) => (
+                                        <option key={code} value={code}>
+                                            {name} ({code})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <div className="mb-1 text-sm font-semibold text-slate-600">Memo</div>
+                                <Input value={editMemo} onChange={(e) => setEditMemo(e.target.value)} placeholder="..." />
+                            </div>
+                        </div>
+
+                        {editErr && (
+                            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-2 text-sm font-semibold text-rose-700">
+                                {editErr}
+                            </div>
+                        )}
+
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saving}>
+                                Cancel
+                            </Button>
+                            <Button onClick={saveEdit} disabled={saving}>
+                                {saving ? "Saving..." : "Save"}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {busy.on && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+                    <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+                        <div className="text-sm font-semibold text-slate-800">
+                            {busy.text || "Working..."}
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
