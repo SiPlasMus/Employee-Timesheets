@@ -124,6 +124,16 @@ function breakToMinutes(v) {
     return 0;
 }
 
+function fmtDuration(mins) {
+    const m = Math.max(0, Math.round(Number(mins || 0)));
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+
+    if (h > 0 && mm > 0) return `${h} s ${mm} m`;
+    if (h > 0) return `${h} s`;
+    return `${mm} m`;
+}
+
 export default function Timesheet() {
     const [month, setMonth] = useState(yyyymm());
     const [loading, setLoading] = useState(false);
@@ -391,7 +401,7 @@ export default function Timesheet() {
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <div className="rounded-full bg-slate-900 text-white px-3 py-1 font-semibold">
-                            ⏱ Total: {fmtHours(totals.net)} soat
+                            ⏱ Total: {fmtDuration(totals.net)}
                         </div>
                         <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold">
                             ☕ Breaks: {fmtBreak(totals.breaks)}
@@ -426,7 +436,7 @@ export default function Timesheet() {
                                         <div className="flex items-center justify-between">
                                             <div className="font-extrabold">{date}</div>
                                             <div className="text-sm font-semibold text-slate-700">
-                                                🕒{fmtHours(dayMins.net)} soat
+                                                🕒{fmtDuration(dayMins.net)}
                                                 <span className="ml-2 text-slate-500">☕ {fmtBreak(dayMins.breaks)}</span>
                                             </div>
                                         </div>
@@ -444,7 +454,7 @@ export default function Timesheet() {
                                                                 🕒{hhmmFromSapInt(r.StartTime)}–{hhmmFromSapInt(r.EndTime)}
                                                             </div>
                                                             <div className="text-sm text-slate-600">
-                                                                ⏱ {fmtHoursSmart(net)} soat
+                                                                ⏱ {fmtDuration(net)}
                                                                 {breakMins > 0 && (
                                                                     <span className="ml-2 text-slate-500">☕ {fmtBreak(breakMins)}</span>
                                                                 )}

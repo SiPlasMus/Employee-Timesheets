@@ -79,6 +79,16 @@ function fmtBreak(mins) {
     return `${hh}:${String(mm).padStart(2, "0")}`;
 }
 
+function fmtDuration(mins) {
+    const m = Math.max(0, Math.round(Number(mins || 0)));
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+
+    if (h > 0 && mm > 0) return `${h} s ${mm} m`;
+    if (h > 0) return `${h} s`;
+    return `${mm} m`;
+}
+
 
 export default function Analysis() {
     const [month, setMonth] = useState(yyyymm());
@@ -222,7 +232,7 @@ export default function Analysis() {
                 <Card>
                     <CardHeader>
                         <div className="text-sm text-slate-500">Total hours</div>
-                        <div className="text-2xl font-extrabold">⏱ {fmtHoursSmart(totals.net)}h</div>
+                        <div className="text-2xl font-extrabold">⏱ {fmtDuration(totals.net)}</div>
                     </CardHeader>
                     <CardContent>
                         <div className="text-sm text-slate-600">Breaks: {fmtBreak(totals.breaks)}</div>
@@ -241,7 +251,7 @@ export default function Analysis() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-sm text-slate-600">
-                            {byAct[0] ? `${fmtHours(byAct[0].mins)}h` : "—"}
+                            {byAct[0] ? `${fmtDuration(byAct[0].mins)}` : "—"}
                         </div>
                     </CardContent>
                 </Card>
@@ -255,7 +265,7 @@ export default function Analysis() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-sm text-slate-600">
-                            {byCC[0] ? `${fmtHours(byCC[0].mins)}h` : "—"}
+                            {byCC[0] ? `${fmtDuration(byCC[0].mins)}` : "—"}
                         </div>
                     </CardContent>
                 </Card>
@@ -273,7 +283,7 @@ export default function Analysis() {
                             {byAct.slice(0, 8).map((x) => (
                                 <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
                                     <div className="font-semibold text-slate-800">{x.name}</div>
-                                    <div className="font-semibold text-slate-900">{fmtHours(x.mins)}h</div>
+                                    <div className="font-semibold text-slate-900">{fmtDuration(x.mins)}</div>
                                 </div>
                             ))}
                             {!byAct.length && <div className="text-sm text-slate-500">No data</div>}
@@ -291,7 +301,7 @@ export default function Analysis() {
                             {byCC.slice(0, 8).map((x) => (
                                 <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
                                     <div className="font-semibold text-slate-800">{x.name}</div>
-                                    <div className="font-semibold text-slate-900">{fmtHours(x.mins)}h</div>
+                                    <div className="font-semibold text-slate-900">{fmtDuration(x.mins)}</div>
                                 </div>
                             ))}
                             {!byCC.length && <div className="text-sm text-slate-500">No cost centers</div>}
@@ -311,7 +321,7 @@ export default function Analysis() {
                             {byDay.map((d) => (
                                 <div key={d.date} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
                                     <div className="font-semibold text-slate-900">{d.date}</div>
-                                    <div className="font-semibold text-slate-900">{fmtHours(d.mins)}h</div>
+                                    <div className="font-semibold text-slate-900">{fmtDuration(d.mins)}</div>
                                 </div>
                             ))}
                             {!byDay.length && <div className="text-sm text-slate-500">No days</div>}
