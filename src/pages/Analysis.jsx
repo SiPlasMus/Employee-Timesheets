@@ -16,10 +16,6 @@ function ymdFromSap(dt) {
     return String(dt || "").slice(0, 10);
 }
 
-function fmtHours(mins) {
-    return (Number(mins || 0) / 60).toFixed(2);
-}
-
 function sapIntToMinutes(v) {
     const n = Number(v);
     if (!Number.isFinite(n)) return 0;
@@ -63,12 +59,6 @@ function calcLineMins(row) {
     const br = breakToMinutes(row.Break); // from HANA select: L."Break"
     const net = Math.max(0, gross - br);
     return { gross, breakMins: br, net };
-}
-
-function fmtHoursSmart(mins) {
-    const h = Number(mins || 0) / 60;
-    const rounded = Math.round(h * 100) / 100;
-    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2);
 }
 
 function fmtBreak(mins) {
