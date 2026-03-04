@@ -25,15 +25,40 @@ function sapIntToMinutes(v) {
     return hh * 60 + mm;
 }
 
-// "00:15:00" -> 15, "0:15:00" -> 15, null -> 0
+// Break from HANA line: "00:10:00" -> 10
 function breakToMinutes(v) {
     if (v == null) return 0;
 
-    // if backend ever returns numeric-like, accept it as minutes
-    if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, v);
+    // If SAP/HANA gives numeric like 100, 110 (HHMM), convert properly
+    if (typeof v === "number" && Number.isFinite(v)) {
+        const n = Math.max(0, v);
+
+        // Heuristic: if it's <= 2359 and looks like HHMM, parse as time-of-day
+        // This will fix 100 -> 60 mins, 110 -> 70 mins.
+        if (n <= 2359) {
+            const s = String(Math.floor(n)).padStart(4, "0");
+            const hh = Number(s.slice(0, 2));
+            const mm = Number(s.slice(2, 4));
+            if (hh <= 23 && mm <= 59) return hh * 60 + mm;
+        }
+
+        // otherwise treat as minutes
+        return Math.max(0, Math.floor(n));
+    }
 
     const s = String(v).trim();
-    // support "HH:MM:SS" or "MM:SS" edge cases
+
+    // If numeric string like "100" -> handle HHMM
+    if (/^\d{1,4}$/.test(s)) {
+        const n = Number(s);
+        const ss = String(n).padStart(4, "0");
+        const hh = Number(ss.slice(0, 2));
+        const mm = Number(ss.slice(2, 4));
+        if (hh <= 23 && mm <= 59) return hh * 60 + mm;
+        return n;
+    }
+
+    // "HH:MM:SS"
     const parts = s.split(":").map((x) => Number(x));
     if (parts.some((x) => !Number.isFinite(x))) return 0;
 
@@ -199,6 +224,7 @@ export default function Analysis() {
                     <div className="w-40">
                         <div className="mb-1 text-xs font-semibold text-slate-600">Month</div>
                         <Input
+                            type="month"
                             value={month}
                             onChange={(e) => setMonth(e.target.value)}
                             placeholder="YYYY-MM"
