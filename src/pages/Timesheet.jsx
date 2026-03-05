@@ -303,7 +303,7 @@ export default function Timesheet() {
         <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
             <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <div>
-                    <div className="mb-1 text-sm font-semibold text-slate-600">Search memo</div>
+                    <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Search memo</div>
                     <Input
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
@@ -312,9 +312,9 @@ export default function Timesheet() {
                 </div>
 
                 <div>
-                    <div className="mb-1 text-sm font-semibold text-slate-600">Activity type</div>
+                    <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Activity type</div>
                     <select
-                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                         value={actFilter}
                         onChange={(e) => setActFilter(e.target.value)}
                     >
@@ -328,9 +328,9 @@ export default function Timesheet() {
                 </div>
 
                 <div>
-                    <div className="mb-1 text-sm font-semibold text-slate-600">Cost center</div>
+                    <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Cost center</div>
                     <select
-                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                         value={ccFilter}
                         onChange={(e) => setCcFilter(e.target.value)}
                     >
@@ -343,7 +343,7 @@ export default function Timesheet() {
                         ))}
                     </select>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-1 flex flex-wrap gap-2">
                     <Button
                         variant="secondary"
                         onClick={() => {
@@ -389,13 +389,13 @@ export default function Timesheet() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                        <div className="rounded-full bg-slate-900 text-white px-3 py-1 font-semibold">
+                        <div className="rounded-full bg-slate-900 text-white px-3 py-1 font-semibold dark:bg-white dark:text-slate-900">
                             ⏱ Total: {fmtDuration(totals.net)}
                         </div>
-                        <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold">
+                        <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold dark:bg-slate-800 dark:text-slate-300">
                             ☕ Breaks: {fmtBreak(totals.breaks)}
                         </div>
-                        <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold">
+                        <div className="rounded-full bg-slate-100 text-slate-700 px-3 py-1 font-semibold dark:bg-slate-800 dark:text-slate-300">
                             🧾 {filteredItems.length} / {items.length} entries
                         </div>
                     </div>
@@ -421,12 +421,12 @@ export default function Timesheet() {
                                 );
 
                                 return (
-                                    <div key={date} className="rounded-2xl border border-slate-200 p-3">
+                                    <div key={date} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
                                         <div className="flex items-center justify-between">
                                             <div className="font-extrabold">{date}</div>
-                                            <div className="text-sm font-semibold text-slate-700">
+                                            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                                 🕒{fmtDuration(dayMins.net)}
-                                                <span className="ml-2 text-slate-500">☕ {fmtBreak(dayMins.breaks)}</span>
+                                                <span className="ml-2 text-slate-500 dark:text-slate-400">☕ {fmtBreak(dayMins.breaks)}</span>
                                             </div>
                                         </div>
 
@@ -436,23 +436,23 @@ export default function Timesheet() {
                                                 return (
                                                     <div
                                                         key={r.LineID}
-                                                        className="rounded-xl bg-slate-50 p-3"
+                                                        className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800"
                                                     >
                                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                                             <div className="font-semibold">
                                                                 🕒{hhmmFromSapInt(r.StartTime)}–{hhmmFromSapInt(r.EndTime)}
                                                             </div>
-                                                            <div className="text-sm text-slate-600">
+                                                            <div className="text-sm text-slate-600 dark:text-slate-400">
                                                                 ⏱ {fmtDuration(net)}
                                                                 {breakMins > 0 && (
-                                                                    <span className="ml-2 text-slate-500">☕ {fmtBreak(breakMins)}</span>
+                                                                    <span className="ml-2 text-slate-500 dark:text-slate-400">☕ {fmtBreak(breakMins)}</span>
                                                                 )}
                                                             </div>
 
                                                             {r.CostCenter && (
-                                                                <div className="text-xs rounded-full bg-white border border-slate-200 px-2 py-1 font-semibold text-slate-700">
+                                                                <div className="text-xs rounded-full bg-white border border-slate-200 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300">
                                                                     {r.CostCenter && (
-                                                                        <div className="text-xs rounded-full bg-white border border-slate-200 px-2 py-1 font-semibold text-slate-700">
+                                                                        <div className="text-xs rounded-full bg-white border border-slate-200 px-2 py-1 font-semibold text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300">
                                                                             🏷 {ccMap.get(String(r.CostCenter)) || r.CostCenter}
                                                                         </div>
                                                                     )}
@@ -460,12 +460,12 @@ export default function Timesheet() {
                                                             )}
 
                                                             <div className="ml-auto flex items-center gap-2">
-                                                                <div className="text-xs text-slate-500">
+                                                                <div className="text-xs text-slate-500 dark:text-slate-400">
                                                                     📌{actMap.get(Number(r.ActType)) || `ActType: ${r.ActType ?? "-"}`}
                                                                 </div>
 
                                                                 <button
-                                                                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                                                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                                                                     onClick={() => openEdit(r)}
                                                                     title="Edit"
                                                                 >
@@ -483,7 +483,7 @@ export default function Timesheet() {
                                                         </div>
 
                                                         {r.U_memo && (
-                                                            <div className="mt-2 text-sm text-slate-800">
+                                                            <div className="mt-2 text-sm ">
                                                                 📝{r.U_memo}
                                                             </div>
                                                         )}
@@ -501,11 +501,11 @@ export default function Timesheet() {
 
             {editOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
                         <div className="flex items-center justify-between">
-                            <div className="text-lg font-extrabold">Edit entry</div>
+                            <div className="text-lg font-extrabold dark:text-slate-100">Edit entry</div>
                             <button
-                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold"
+                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                 onClick={() => setEditOpen(false)}
                             >
                                 ✖
@@ -514,17 +514,17 @@ export default function Timesheet() {
 
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Start</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Start</div>
                                 <Input value={editStart} onChange={(e) => setEditStart(e.target.value)} placeholder="HH:mm" />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">End</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">End</div>
                                 <Input value={editEnd} onChange={(e) => setEditEnd(e.target.value)} placeholder="HH:mm" />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Break (minutes)</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Break (minutes)</div>
                                 <Input
                                     type="number"
                                     value={editBreakMin}
@@ -534,9 +534,9 @@ export default function Timesheet() {
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Activity type</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Activity type</div>
                                 <select
-                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                                     value={editActType}
                                     onChange={(e) => setEditActType(e.target.value)}
                                 >
@@ -550,9 +550,9 @@ export default function Timesheet() {
                             </div>
 
                             <div className="md:col-span-2">
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Cost center</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Cost center</div>
                                 <select
-                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                                     value={editCC}
                                     onChange={(e) => setEditCC(e.target.value)}
                                 >
@@ -566,7 +566,7 @@ export default function Timesheet() {
                             </div>
 
                             <div className="md:col-span-2">
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Memo</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Memo</div>
                                 <Input value={editMemo} onChange={(e) => setEditMemo(e.target.value)} placeholder="..." />
                             </div>
                         </div>
@@ -591,9 +591,9 @@ export default function Timesheet() {
 
             {busy.on && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
-                    <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl">
+                    <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl dark:bg-slate-800">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
-                        <div className="text-sm font-semibold text-slate-800">
+                        <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                             {busy.text || "Working..."}
                         </div>
                     </div>

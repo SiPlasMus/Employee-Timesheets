@@ -165,8 +165,8 @@ export default function AddLine() {
         <div className="mx-auto max-w-3xl px-4 py-4 pb-48">
             <Card>
                 <CardHeader>
-                    <div className="text-xl font-extrabold">Add Timesheet Entry</div>
-                    <div className="text-sm text-slate-500">
+                    <div className="text-xl font-extrabold dark:text-slate-100">Add Timesheet Entry</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
                         Work time: <span className="font-semibold text-slate-700">{fmtHours(workMins)}h</span>
                     </div>
                 </CardHeader>
@@ -175,27 +175,27 @@ export default function AddLine() {
                     <form onSubmit={submit} className="grid gap-4">
                         <div className="grid gap-3 md:grid-cols-2">
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Month</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Month</div>
                                 <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Date</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Date</div>
                                 <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Start</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Start</div>
                                 <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">End</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">End</div>
                                 <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Break (minutes)</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Break (minutes)</div>
                                 <Input
                                     inputMode="numeric"
                                     value={breakMin}
@@ -205,9 +205,9 @@ export default function AddLine() {
                             </div>
 
                             <div>
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Activity Type</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Activity Type</div>
                                 <select
-                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                                     value={activityType}
                                     onChange={(e) => setActivityType(Number(e.target.value))}
                                 >
@@ -220,9 +220,9 @@ export default function AddLine() {
                             </div>
 
                             <div className="md:col-span-2">
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Cost Center</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Cost Center</div>
                                 <select
-                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300"
+                                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                                     value={costCenter}
                                     onChange={(e) => setCostCenter(e.target.value)}
                                     disabled={loadingCC}
@@ -237,9 +237,9 @@ export default function AddLine() {
                             </div>
 
                             <div className="md:col-span-2">
-                                <div className="mb-1 text-sm font-semibold text-slate-600">Memo (optional)</div>
+                                <div className="mb-1 text-sm font-semibold text-slate-600 dark:text-slate-400">Memo (optional)</div>
                                 <textarea
-                                    className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300"
+                                    className="min-h-[90px] w-full rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600"
                                     value={memo}
                                     onChange={(e) => setMemo(e.target.value)}
                                     placeholder="What did you do?"

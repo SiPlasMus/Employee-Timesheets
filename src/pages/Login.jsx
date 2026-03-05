@@ -30,9 +30,12 @@ export default function Login() {
                 setErr("No token from server");
             }
         } catch (e) {
-            console.log("LOGIN ERR", e);
-            console.log("RESP", e?.response);
-            setErr(e?.response?.data?.error || e.message || "Network error");
+            const isTimeout = e.code === "ECONNABORTED" || e.message?.includes("timeout");
+            setErr(
+                isTimeout
+                    ? "Server is taking too long to respond. Please try again."
+                    : e?.response?.data?.error || e.message || "Network error"
+            );
         } finally {
             setLoading(false);
         }
@@ -43,8 +46,8 @@ export default function Login() {
             <div className="mx-auto max-w-sm">
                 <Card>
                     <CardHeader>
-                        <div className="text-xl font-extrabold">Employee Timesheets</div>
-                        <div className="text-sm text-slate-500">Login with EmpID and PIN</div>
+                        <div className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Employee Timesheets</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Login with EmpID and PIN</div>
                     </CardHeader>
 
                     <CardContent>
@@ -52,7 +55,7 @@ export default function Login() {
                             <Input placeholder="EmpID" value={empId} onChange={(e) => setEmpId(e.target.value)} />
                             <Input placeholder="PIN" type="password" value={pin} onChange={(e) => setPin(e.target.value)} />
                             <Button disabled={loading}>{loading ? "Logging in..." : "Login"}</Button>
-                            {err && <div className="text-sm font-semibold text-rose-600">{err}</div>}
+                            {err && <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">{err}</div>}
                         </form>
                     </CardContent>
                 </Card>

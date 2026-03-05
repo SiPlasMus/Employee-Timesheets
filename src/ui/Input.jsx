@@ -7,7 +7,9 @@ export default function Input({ className, ...props }) {
             className={cn(
                 "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 " +
                 "text-slate-900 placeholder:text-slate-400 outline-none " +
-                "focus:ring-2 focus:ring-slate-300",
+                "focus:ring-2 focus:ring-slate-300 " +
+                "dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 " +
+                "dark:placeholder:text-slate-500 dark:focus:ring-slate-600",
                 className
             )}
             {...props}

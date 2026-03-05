@@ -84,8 +84,8 @@ export default function Profile({ onLogout }) {
                 <CardHeader>
                     <div className="flex items-start justify-between gap-3">
                         <div>
-                            <div className="text-xl font-extrabold">Profile</div>
-                            <div className="text-sm text-slate-500">Employee information</div>
+                            <div className="text-xl font-extrabold dark:text-slate-100">Profile</div>
+                            <div className="text-sm text-slate-500 dark:text-slate-400">Employee information</div>
                         </div>
 
                         <div className="flex gap-2">
@@ -104,20 +104,20 @@ export default function Profile({ onLogout }) {
                 <CardContent>
                     <div className="grid gap-3">
                         {/* Name card */}
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <div className="text-sm text-slate-500">Full name</div>
-                            <div className="mt-1 text-lg font-extrabold">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+                            <div className="text-sm text-slate-500 dark:text-slate-400">Full name</div>
+                            <div className="mt-1 text-lg font-extrabold dark:text-slate-100">
                                 {fullName || "—"}
                             </div>
                         </div>
 
                         {/* Details */}
-                        <div className="rounded-2xl border border-slate-200 bg-white">
-                            <div className="divide-y divide-slate-200">
+                        <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800">
+                            <div className="divide-y divide-slate-200 dark:divide-slate-700">
                                 {rows.map((r) => (
                                     <div key={r.label} className="flex items-center justify-between gap-3 p-4">
-                                        <div className="text-sm font-semibold text-slate-600">{r.label}</div>
-                                        <div className="text-sm font-semibold text-slate-900 text-right">
+                                        <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">{r.label}</div>
+                                        <div className="text-sm font-semibold text-slate-900 text-right dark:text-slate-100">
                                             {r.value}
                                         </div>
                                     </div>
@@ -142,14 +142,14 @@ export default function Profile({ onLogout }) {
                                 className="absolute inset-0 bg-black/40"
                                 onClick={() => setShowPin(false)}
                             />
-                            <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+                            <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <div className="text-lg font-extrabold">Change PIN</div>
-                                        <div className="text-sm text-slate-500">Update your login PIN</div>
+                                        <div className="text-lg font-extrabold dark:text-slate-100">Change PIN</div>
+                                        <div className="text-sm text-slate-500 dark:text-slate-400">Update your login PIN</div>
                                     </div>
                                     <button
-                                        className="h-9 w-9 rounded-xl border border-slate-200 bg-white font-bold"
+                                        className="h-9 w-9 rounded-xl border border-slate-200 bg-white font-bold dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                                         onClick={() => setShowPin(false)}
                                     >
                                         ✕

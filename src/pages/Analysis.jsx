@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { ACTIVITY_TYPES } from "../components/activityTypes";
+import ClaudeAnalysis from "../components/ClaudeAnalysis";
 
 function yyyymm(date = new Date()) {
     const y = date.getFullYear();
@@ -216,8 +217,8 @@ export default function Analysis() {
         <div className="mx-auto max-w-5xl px-4 py-4 pb-48">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <div className="text-xl font-extrabold">Analysis</div>
-                    <div className="text-sm text-slate-500">Monthly summary</div>
+                    <div className="text-xl font-extrabold dark:text-slate-100">Analysis</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Monthly summary</div>
                 </div>
 
                 <div className="flex items-end gap-2">
@@ -247,26 +248,26 @@ export default function Analysis() {
             <div className="grid gap-3 md:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <div className="text-sm text-slate-500">Total hours</div>
-                        <div className="text-2xl font-extrabold">⏱ {fmtDuration(totals.net)}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Total hours</div>
+                        <div className="text-2xl font-extrabold dark:text-slate-100">⏱ {fmtDuration(totals.net)}</div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm text-slate-600">Breaks: {fmtBreak(totals.breaks)}</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">Breaks: {fmtBreak(totals.breaks)}</div>
                     </CardContent>
                     <CardContent>
-                        <div className="text-sm text-slate-600">Entries: {items.length}</div>
+                        <div className="text-sm text-slate-600 dark:text-slate-400">Entries: {items.length}</div>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
-                        <div className="text-sm text-slate-500">Top activity</div>
-                        <div className="text-xl font-extrabold">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Top activity</div>
+                        <div className="text-xl font-extrabold dark:text-slate-100">
                             {byAct[0]?.name || "—"}
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
                             {byAct[0] ? `${fmtDuration(byAct[0].mins)}` : "—"}
                         </div>
                     </CardContent>
@@ -274,13 +275,13 @@ export default function Analysis() {
 
                 <Card>
                     <CardHeader>
-                        <div className="text-sm text-slate-500">Top cost center</div>
-                        <div className="text-xl font-extrabold">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Top cost center</div>
+                        <div className="text-xl font-extrabold dark:text-slate-100">
                             {byCC[0]?.name || "—"}
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-sm text-slate-600">
+                        <div className="text-sm text-slate-600 dark:text-slate-400">
                             {byCC[0] ? `${fmtDuration(byCC[0].mins)}` : "—"}
                         </div>
                     </CardContent>
@@ -291,36 +292,36 @@ export default function Analysis() {
             <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <div className="text-lg font-extrabold">📌 By activity type</div>
-                        <div className="text-sm text-slate-500">Top 8</div>
+                        <div className="text-lg font-extrabold dark:text-slate-100">📌 By activity type</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Top 8</div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-2">
                             {byAct.slice(0, 8).map((x) => (
-                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                    <div className="font-semibold text-slate-800">{x.name}</div>
-                                    <div className="font-semibold text-slate-900">{fmtDuration(x.mins)}</div>
+                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                                    <div className="font-semibold text-slate-800 dark:text-slate-200">{x.name}</div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(x.mins)}</div>
                                 </div>
                             ))}
-                            {!byAct.length && <div className="text-sm text-slate-500">No data</div>}
+                            {!byAct.length && <div className="text-sm text-slate-500 dark:text-slate-400">No data</div>}
                         </div>
                     </CardContent>
                 </Card>
 
                 <Card>
                     <CardHeader>
-                        <div className="text-lg font-extrabold">🏷 By cost center</div>
-                        <div className="text-sm text-slate-500">Top 8</div>
+                        <div className="text-lg font-extrabold dark:text-slate-100">🏷 By cost center</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Top 8</div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-2">
                             {byCC.slice(0, 8).map((x) => (
-                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                    <div className="font-semibold text-slate-800">{x.name}</div>
-                                    <div className="font-semibold text-slate-900">{fmtDuration(x.mins)}</div>
+                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
+                                    <div className="font-semibold text-slate-800 dark:text-slate-200">{x.name}</div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(x.mins)}</div>
                                 </div>
                             ))}
-                            {!byCC.length && <div className="text-sm text-slate-500">No cost centers</div>}
+                            {!byCC.length && <div className="text-sm text-slate-500 dark:text-slate-400">No cost centers</div>}
                         </div>
                     </CardContent>
                 </Card>
@@ -329,21 +330,31 @@ export default function Analysis() {
             <div className="mt-3">
                 <Card>
                     <CardHeader>
-                        <div className="text-lg font-extrabold">📅 Daily totals</div>
-                        <div className="text-sm text-slate-500">Newest first</div>
+                        <div className="text-lg font-extrabold dark:text-slate-100">📅 Daily totals</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">Newest first</div>
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-2">
                             {byDay.map((d) => (
-                                <div key={d.date} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3">
-                                    <div className="font-semibold text-slate-900">{d.date}</div>
-                                    <div className="font-semibold text-slate-900">{fmtDuration(d.mins)}</div>
+                                <div key={d.date} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{d.date}</div>
+                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(d.mins)}</div>
                                 </div>
                             ))}
-                            {!byDay.length && <div className="text-sm text-slate-500">No days</div>}
+                            {!byDay.length && <div className="text-sm text-slate-500 dark:text-slate-400">No days</div>}
                         </div>
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="mt-3">
+                <ClaudeAnalysis
+                    month={month}
+                    totals={totals}
+                    byAct={byAct}
+                    byCC={byCC}
+                    byDay={byDay}
+                />
             </div>
         </div>
     );
