@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../api";
-import { setToken } from "../auth";
+import { setToken, setRole } from "../auth";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { Card, CardHeader, CardContent } from "../ui/Card";
@@ -14,7 +14,6 @@ export default function Login() {
 
     const nav = useNavigate();
     const loc = useLocation();
-    const from = loc.state?.from || "/timesheet";
 
     async function onSubmit(e) {
         e.preventDefault();
@@ -24,8 +23,10 @@ export default function Login() {
             const r = await api.post("/auth/login", { empId, pin });
             if (r.data?.token) {
                 setToken(r.data.token);
+                setRole(r.data.role);
                 localStorage.setItem("et_empId", String(empId));
-                nav(from, { replace: true });
+                const defaultDest = r.data.role === "admin" ? "/admin" : "/timesheet";
+                nav(loc.state?.from || defaultDest, { replace: true });
             } else {
                 setErr("No token from server");
             }

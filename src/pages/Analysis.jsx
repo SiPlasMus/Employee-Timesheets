@@ -1,19 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+    ResponsiveContainer, PieChart, Pie, Cell, Legend,
+    ReferenceLine, LabelList,
+} from "recharts";
 import { api } from "../api";
 import { Card, CardContent, CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { ACTIVITY_TYPES } from "../components/activityTypes";
 import ClaudeAnalysis from "../components/ClaudeAnalysis";
+import { useTheme } from "../hooks/useTheme";
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
 
 function yyyymm(date = new Date()) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    return `${y}-${m}`;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function ymdFromSap(dt) {
-    // "2025-12-02 00:00:00.000..." -> "2025-12-02"
     return String(dt || "").slice(0, 10);
 }
 
@@ -21,35 +26,22 @@ function sapIntToMinutes(v) {
     const n = Number(v);
     if (!Number.isFinite(n)) return 0;
     const s = String(Math.max(0, n)).padStart(4, "0");
-    const hh = Number(s.slice(0, 2));
-    const mm = Number(s.slice(2, 4));
-    return hh * 60 + mm;
+    return Number(s.slice(0, 2)) * 60 + Number(s.slice(2, 4));
 }
 
-// Break from HANA line: "00:10:00" -> 10
 function breakToMinutes(v) {
     if (v == null) return 0;
-
-    // If SAP/HANA gives numeric like 100, 110 (HHMM), convert properly
     if (typeof v === "number" && Number.isFinite(v)) {
         const n = Math.max(0, v);
-
-        // Heuristic: if it's <= 2359 and looks like HHMM, parse as time-of-day
-        // This will fix 100 -> 60 mins, 110 -> 70 mins.
         if (n <= 2359) {
             const s = String(Math.floor(n)).padStart(4, "0");
             const hh = Number(s.slice(0, 2));
             const mm = Number(s.slice(2, 4));
             if (hh <= 23 && mm <= 59) return hh * 60 + mm;
         }
-
-        // otherwise treat as minutes
         return Math.max(0, Math.floor(n));
     }
-
     const s = String(v).trim();
-
-    // If numeric string like "100" -> handle HHMM
     if (/^\d{1,4}$/.test(s)) {
         const n = Number(s);
         const ss = String(n).padStart(4, "0");
@@ -58,60 +50,95 @@ function breakToMinutes(v) {
         if (hh <= 23 && mm <= 59) return hh * 60 + mm;
         return n;
     }
-
-    // "HH:MM:SS"
-    const parts = s.split(":").map((x) => Number(x));
+    const parts = s.split(":").map(Number);
     if (parts.some((x) => !Number.isFinite(x))) return 0;
-
-    if (parts.length === 3) {
-        const [hh, mm, ss] = parts;
-        return Math.max(0, hh * 60 + mm + (ss >= 30 ? 1 : 0));
-    }
-    if (parts.length === 2) {
-        const [mm, ss] = parts;
-        return Math.max(0, mm + (ss >= 30 ? 1 : 0));
-    }
+    if (parts.length === 3) return Math.max(0, parts[0] * 60 + parts[1] + (parts[2] >= 30 ? 1 : 0));
+    if (parts.length === 2) return Math.max(0, parts[0] + (parts[1] >= 30 ? 1 : 0));
     return 0;
 }
 
-function minutesBetweenSapTimes(startInt, endInt) {
-    const a = sapIntToMinutes(startInt);
-    const b = sapIntToMinutes(endInt);
-    return Math.max(0, b - a);
-}
-
 function calcLineMins(row) {
-    const gross = minutesBetweenSapTimes(row.StartTime, row.EndTime);
-    const br = breakToMinutes(row.Break); // from HANA select: L."Break"
-    const net = Math.max(0, gross - br);
-    return { gross, breakMins: br, net };
+    const gross = Math.max(0, sapIntToMinutes(row.EndTime) - sapIntToMinutes(row.StartTime));
+    const br = breakToMinutes(row.Break);
+    return { gross, breakMins: br, net: Math.max(0, gross - br) };
 }
 
-function fmtBreak(mins) {
-    const m = Math.max(0, Number(mins || 0));
-    const hh = Math.floor(m / 60);
-    const mm = m % 60;
-    if (hh <= 0) return `${mm} min`;
-    return `${hh}:${String(mm).padStart(2, "0")}`;
-}
-
-function fmtDuration(mins) {
+function fmtH(mins) {
     const m = Math.max(0, Math.round(Number(mins || 0)));
     const h = Math.floor(m / 60);
     const mm = m % 60;
-
-    if (h > 0 && mm > 0) return `${h} s ${mm} m`;
-    if (h > 0) return `${h} s`;
-    return `${mm} m`;
+    if (h > 0 && mm > 0) return `${h}h ${mm}m`;
+    if (h > 0) return `${h}h`;
+    return `${mm}m`;
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const CHART_COLORS = [
+    "#6366f1", "#0ea5e9", "#10b981", "#f59e0b",
+    "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899",
+    "#84cc16", "#f97316",
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, icon, bgClass, textClass }) {
+    return (
+        <Card className="overflow-hidden">
+            <div className="p-4">
+                <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg ${bgClass} ${textClass}`}>
+                    {icon}
+                </div>
+                <div className="truncate text-xl font-extrabold text-slate-900 dark:text-slate-100">
+                    {value}
+                </div>
+                <div className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    {label}
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+function ChartCard({ title, subtitle, children }) {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="font-extrabold text-slate-900 dark:text-slate-100">{title}</div>
+                {subtitle && <div className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</div>}
+            </CardHeader>
+            <CardContent className="pt-1">{children}</CardContent>
+        </Card>
+    );
+}
+
+// Custom recharts tooltip
+function CustomTooltip({ active, payload, label, tooltipStyle }) {
+    if (!active || !payload?.length) return null;
+    return (
+        <div style={{ ...tooltipStyle, padding: "8px 12px", fontSize: 13 }}>
+            {label && (
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
+            )}
+            {payload.map((p, i) => (
+                <div key={i} style={{ color: p.color }}>
+                    {p.name}: <strong>{p.value}h</strong>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Analysis() {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+
     const [month, setMonth] = useState(yyyymm());
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState("");
     const [items, setItems] = useState([]);
-
     const [ccMap, setCcMap] = useState(() => new Map());
 
     const empId = Number(localStorage.getItem("et_empId") || 0);
@@ -126,7 +153,6 @@ export default function Analysis() {
         if (!empId) return setErr("empId missing. Please login again.");
         setLoading(true);
         try {
-            // load cost centers (optional but nice)
             if (ccMap.size === 0) {
                 try {
                     const rcc = await api.get("/hana/cost-centers");
@@ -134,10 +160,7 @@ export default function Analysis() {
                     setCcMap(new Map(list.map((x) => [String(x.code), String(x.name)])));
                 } catch (_) {}
             }
-
-            const r = await api.get(`/hana/timesheets/lines/${empId}`, {
-                params: { month },
-            });
+            const r = await api.get(`/hana/timesheets/lines/${empId}`, { params: { month } });
             setItems(r.data?.items || []);
         } catch (e) {
             setErr(e?.response?.data?.error || e.message || "Error");
@@ -152,44 +175,37 @@ export default function Analysis() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [month]);
 
-    const totals = useMemo(() => {
-        return items.reduce(
+    // ── Aggregations ──────────────────────────────────────────────────────────
+
+    const totals = useMemo(() =>
+        items.reduce(
             (acc, r) => {
                 const { gross, breakMins, net } = calcLineMins(r);
-                acc.gross += gross;
-                acc.breaks += breakMins;
-                acc.net += net;
+                acc.gross += gross; acc.breaks += breakMins; acc.net += net;
                 return acc;
             },
             { gross: 0, breaks: 0, net: 0 }
-        );
-    }, [items]);
+        ), [items]);
 
     const byAct = useMemo(() => {
-        const map = new Map(); // actType -> minutes
+        const map = new Map();
         for (const r of items) {
             const key = String(r.ActType ?? "");
             const { net } = calcLineMins(r);
-            const mins = net;
-            map.set(key, (map.get(key) || 0) + mins);
+            map.set(key, (map.get(key) || 0) + net);
         }
         return Array.from(map.entries())
-            .map(([k, mins]) => ({
-                key: k,
-                name: actMap.get(k) || `ActType ${k}`,
-                mins,
-            }))
+            .map(([k, mins]) => ({ key: k, name: actMap.get(k) || `ActType ${k}`, mins }))
             .sort((a, b) => b.mins - a.mins);
     }, [items, actMap]);
 
     const byCC = useMemo(() => {
-        const map = new Map(); // costCenter -> minutes
+        const map = new Map();
         for (const r of items) {
             const key = String(r.CostCenter || "");
             if (!key) continue;
             const { net } = calcLineMins(r);
-            const mins = net;
-            map.set(key, (map.get(key) || 0) + mins);
+            map.set(key, (map.get(key) || 0) + net);
         }
         return Array.from(map.entries())
             .map(([k, mins]) => ({
@@ -201,161 +217,303 @@ export default function Analysis() {
     }, [items, ccMap]);
 
     const byDay = useMemo(() => {
-        const map = new Map(); // date -> minutes
+        const map = new Map();
         for (const r of items) {
             const d = ymdFromSap(r.Date);
             const { net } = calcLineMins(r);
-            const mins = net;
-            map.set(d, (map.get(d) || 0) + mins);
+            map.set(d, (map.get(d) || 0) + net);
         }
         return Array.from(map.entries())
             .map(([d, mins]) => ({ date: d, mins }))
-            .sort((a, b) => (a.date < b.date ? 1 : -1)); // desc
+            .sort((a, b) => (a.date < b.date ? 1 : -1));
     }, [items]);
 
-    return (
-        <div className="mx-auto max-w-5xl px-4 py-4 pb-48">
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <div className="text-xl font-extrabold dark:text-slate-100">Analysis</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">Monthly summary</div>
-                </div>
+    // ── Chart data ────────────────────────────────────────────────────────────
 
+    const dailyChartData = useMemo(() =>
+        [...byDay]
+            .sort((a, b) => (a.date > b.date ? 1 : -1))
+            .map((d) => ({
+                day: d.date.slice(8),
+                label: d.date,
+                hours: parseFloat((d.mins / 60).toFixed(2)),
+            })),
+        [byDay]
+    );
+
+    const actChartData = useMemo(() =>
+        byAct.slice(0, 8).map((x) => ({
+            name: x.name,
+            hours: parseFloat((x.mins / 60).toFixed(1)),
+        })),
+        [byAct]
+    );
+
+    const ccChartData = useMemo(() =>
+        byCC.slice(0, 6).map((x) => ({
+            name: x.name.length > 20 ? x.name.slice(0, 17) + "…" : x.name,
+            hours: parseFloat((x.mins / 60).toFixed(1)),
+        })),
+        [byCC]
+    );
+
+    const avgDailyMins = byDay.length ? totals.net / byDay.length : 0;
+    const avgDailyHours = parseFloat((avgDailyMins / 60).toFixed(2));
+
+    // ── Theme tokens for charts ───────────────────────────────────────────────
+
+    const gridStroke = isDark ? "#334155" : "#e2e8f0";
+    const tickColor = isDark ? "#94a3b8" : "#64748b";
+    const tooltipStyle = {
+        background: isDark ? "#1e293b" : "#fff",
+        border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
+        borderRadius: 12,
+        color: isDark ? "#f1f5f9" : "#0f172a",
+    };
+    const cursorStyle = { fill: isDark ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)" };
+
+    // ── Render ────────────────────────────────────────────────────────────────
+
+    return (
+        <div className="mx-auto max-w-5xl px-3 py-4 pb-32">
+
+            {/* ── Header ── */}
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">
+                        Dashboard
+                    </div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {month} · {items.length} entries
+                    </div>
+                </div>
                 <div className="flex items-end gap-2">
-                    <div className="w-40">
-                        <div className="mb-1 text-xs font-semibold text-slate-600">Month</div>
+                    <div>
+                        <div className="mb-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Month</div>
                         <Input
                             type="month"
                             value={month}
                             onChange={(e) => setMonth(e.target.value)}
-                            placeholder="YYYY-MM"
+                            className="w-40 h-9 text-sm"
                         />
                     </div>
-
-                    <Button className="h-11" variant="secondary" onClick={load} disabled={loading}>
-                        {loading ? "Loading..." : "Refresh"}
+                    <Button variant="secondary" size="sm" onClick={load} disabled={loading}>
+                        {loading ? "Loading…" : "Refresh"}
                     </Button>
                 </div>
             </div>
 
             {err && (
-                <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
+                <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-400">
                     {err}
                 </div>
             )}
 
-            {/* Top cards */}
-            <div className="grid gap-3 md:grid-cols-3">
-                <Card>
-                    <CardHeader>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Total hours</div>
-                        <div className="text-2xl font-extrabold dark:text-slate-100">⏱ {fmtDuration(totals.net)}</div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">Breaks: {fmtBreak(totals.breaks)}</div>
-                    </CardContent>
-                    <CardContent>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">Entries: {items.length}</div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Top activity</div>
-                        <div className="text-xl font-extrabold dark:text-slate-100">
-                            {byAct[0]?.name || "—"}
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                            {byAct[0] ? `${fmtDuration(byAct[0].mins)}` : "—"}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Top cost center</div>
-                        <div className="text-xl font-extrabold dark:text-slate-100">
-                            {byCC[0]?.name || "—"}
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                            {byCC[0] ? `${fmtDuration(byCC[0].mins)}` : "—"}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Lists */}
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <div className="text-lg font-extrabold dark:text-slate-100">📌 By activity type</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Top 8</div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-2">
-                            {byAct.slice(0, 8).map((x) => (
-                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                                    <div className="font-semibold text-slate-800 dark:text-slate-200">{x.name}</div>
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(x.mins)}</div>
-                                </div>
-                            ))}
-                            {!byAct.length && <div className="text-sm text-slate-500 dark:text-slate-400">No data</div>}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <div className="text-lg font-extrabold dark:text-slate-100">🏷 By cost center</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Top 8</div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-2">
-                            {byCC.slice(0, 8).map((x) => (
-                                <div key={x.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
-                                    <div className="font-semibold text-slate-800 dark:text-slate-200">{x.name}</div>
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(x.mins)}</div>
-                                </div>
-                            ))}
-                            {!byCC.length && <div className="text-sm text-slate-500 dark:text-slate-400">No cost centers</div>}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="mt-3">
-                <Card>
-                    <CardHeader>
-                        <div className="text-lg font-extrabold dark:text-slate-100">📅 Daily totals</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">Newest first</div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-2">
-                            {byDay.map((d) => (
-                                <div key={d.date} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{d.date}</div>
-                                    <div className="font-semibold text-slate-900 dark:text-slate-100">{fmtDuration(d.mins)}</div>
-                                </div>
-                            ))}
-                            {!byDay.length && <div className="text-sm text-slate-500 dark:text-slate-400">No days</div>}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="mt-3">
-                <ClaudeAnalysis
-                    month={month}
-                    totals={totals}
-                    byAct={byAct}
-                    byCC={byCC}
-                    byDay={byDay}
+            {/* ── KPI Cards ── */}
+            <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <KpiCard
+                    label="Total hours"
+                    value={fmtH(totals.net)}
+                    icon="⏱"
+                    bgClass="bg-indigo-100 dark:bg-indigo-900/30"
+                    textClass="text-indigo-600 dark:text-indigo-400"
+                />
+                <KpiCard
+                    label="Working days"
+                    value={String(byDay.length || "—")}
+                    icon="📅"
+                    bgClass="bg-sky-100 dark:bg-sky-900/30"
+                    textClass="text-sky-600 dark:text-sky-400"
+                />
+                <KpiCard
+                    label="Avg per day"
+                    value={byDay.length ? fmtH(Math.round(avgDailyMins)) : "—"}
+                    icon="⚡"
+                    bgClass="bg-emerald-100 dark:bg-emerald-900/30"
+                    textClass="text-emerald-600 dark:text-emerald-400"
+                />
+                <KpiCard
+                    label="Top activity"
+                    value={byAct[0]?.name || "—"}
+                    icon="📌"
+                    bgClass="bg-amber-100 dark:bg-amber-900/30"
+                    textClass="text-amber-600 dark:text-amber-400"
                 />
             </div>
+
+            {/* ── Daily Hours Chart ── */}
+            {dailyChartData.length > 0 && (
+                <div className="mb-3">
+                    <ChartCard
+                        title="Daily Hours"
+                        subtitle={`Avg ${avgDailyHours}h/day · dashed line = average`}
+                    >
+                        <ResponsiveContainer width="100%" height={210}>
+                            <BarChart
+                                data={dailyChartData}
+                                margin={{ top: 6, right: 8, bottom: 4, left: -18 }}
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke={gridStroke}
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="day"
+                                    tick={{ fill: tickColor, fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    interval={dailyChartData.length > 20 ? 4 : 1}
+                                />
+                                <YAxis
+                                    tick={{ fill: tickColor, fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tickFormatter={(v) => `${v}h`}
+                                />
+                                <Tooltip
+                                    contentStyle={tooltipStyle}
+                                    cursor={cursorStyle}
+                                    formatter={(v) => [`${v}h`, "Hours"]}
+                                    labelFormatter={(l) => `Day ${l}`}
+                                />
+                                <ReferenceLine
+                                    y={avgDailyHours}
+                                    stroke="#6366f1"
+                                    strokeDasharray="5 3"
+                                    strokeWidth={1.5}
+                                />
+                                <Bar
+                                    dataKey="hours"
+                                    name="Hours"
+                                    fill="#6366f1"
+                                    radius={[4, 4, 0, 0]}
+                                    maxBarSize={30}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                </div>
+            )}
+
+            {/* ── Activity + Cost Center Row ── */}
+            <div className="mb-3 grid gap-3 md:grid-cols-2">
+
+                {/* Activity Donut */}
+                {actChartData.length > 0 && (
+                    <ChartCard title="By Activity" subtitle="Time distribution">
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={actChartData}
+                                    dataKey="hours"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="42%"
+                                    innerRadius={52}
+                                    outerRadius={80}
+                                    paddingAngle={2}
+                                >
+                                    {actChartData.map((_, i) => (
+                                        <Cell
+                                            key={i}
+                                            fill={CHART_COLORS[i % CHART_COLORS.length]}
+                                        />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={tooltipStyle}
+                                    formatter={(v, name) => [`${v}h`, name]}
+                                />
+                                <Legend
+                                    iconType="circle"
+                                    iconSize={7}
+                                    wrapperStyle={{ fontSize: 11, color: tickColor, paddingTop: 4 }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                )}
+
+                {/* Cost Center Horizontal Bars */}
+                {ccChartData.length > 0 && (
+                    <ChartCard
+                        title="By Cost Center"
+                        subtitle={`Top ${ccChartData.length}`}
+                    >
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart
+                                layout="vertical"
+                                data={ccChartData}
+                                margin={{ top: 4, right: 48, bottom: 4, left: 0 }}
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke={gridStroke}
+                                    horizontal={false}
+                                />
+                                <XAxis
+                                    type="number"
+                                    tick={{ fill: tickColor, fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tickFormatter={(v) => `${v}h`}
+                                />
+                                <YAxis
+                                    type="category"
+                                    dataKey="name"
+                                    width={88}
+                                    tick={{ fill: tickColor, fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false}
+                                />
+                                <Tooltip
+                                    contentStyle={tooltipStyle}
+                                    cursor={cursorStyle}
+                                    formatter={(v) => [`${v}h`, "Hours"]}
+                                />
+                                <Bar
+                                    dataKey="hours"
+                                    name="Hours"
+                                    fill="#10b981"
+                                    radius={[0, 4, 4, 0]}
+                                    maxBarSize={22}
+                                >
+                                    <LabelList
+                                        dataKey="hours"
+                                        position="right"
+                                        style={{ fill: tickColor, fontSize: 11 }}
+                                        formatter={(v) => `${v}h`}
+                                    />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                )}
+            </div>
+
+            {/* ── Activity Breakdown List (fallback / no CC) ── */}
+            {actChartData.length === 0 && ccChartData.length === 0 && !loading && !err && items.length === 0 && (
+                <Card className="mb-3">
+                    <CardContent>
+                        <div className="py-10 text-center">
+                            <div className="mb-3 text-5xl">📊</div>
+                            <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                                No data for {month}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ── Claude ── */}
+            <ClaudeAnalysis
+                month={month}
+                totals={totals}
+                byAct={byAct}
+                byCC={byCC}
+                byDay={byDay}
+            />
         </div>
     );
 }

@@ -1,8 +1,8 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { BarChart3, CalendarDays, Moon, PlusCircle, Sun, User } from "lucide-react";
+import { BarChart3, CalendarDays, Moon, PlusCircle, ShieldCheck, Sun, User } from "lucide-react";
 import { cn } from "../ui/ui";
-import { clearToken, isAuthed } from "../auth";
+import { clearToken, isAdmin, isAuthed } from "../auth";
 import { useTheme } from "../hooks/useTheme";
 
 function TabLink({ to, label, Icon }) {
@@ -40,6 +40,7 @@ function TabLink({ to, label, Icon }) {
 export default function Navbar() {
     const nav = useNavigate();
     const { theme, toggle } = useTheme();
+    const admin = isAdmin();
 
     if (!isAuthed()) return null;
 
@@ -71,10 +72,11 @@ export default function Navbar() {
 
             {/* Bottom Tabs */}
             <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/80 backdrop-blur border-t border-slate-200 dark:bg-slate-900/80 dark:border-slate-700">
-                <div className="mx-auto grid max-w-3xl grid-cols-4 gap-1 px-2 py-2">
+                <div className={cn("mx-auto gap-1 px-2 py-2 grid max-w-3xl", admin ? "grid-cols-5" : "grid-cols-4")}>
                     <TabLink to="/timesheet" label="Timesheet" Icon={CalendarDays} />
                     <TabLink to="/add" label="Add" Icon={PlusCircle} />
                     <TabLink to="/analysis" label="Analysis" Icon={BarChart3} />
+                    {admin && <TabLink to="/admin" label="Admin" Icon={ShieldCheck} />}
                     <TabLink to="/profile" label="Profile" Icon={User} />
                 </div>
 
