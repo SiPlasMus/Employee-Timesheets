@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { api } from "../api";
 import { Card, CardContent, CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
@@ -139,6 +140,15 @@ export default function Timesheet() {
     const [ccFilter, setCcFilter] = useState("all");   // cost center code or "all"
 
     const [editOpen, setEditOpen] = useState(false);
+
+    useEffect(() => {
+        if (editOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => { document.body.style.overflow = ""; };
+    }, [editOpen]);
     const [editRow, setEditRow] = useState(null);
 
     const [editStart, setEditStart] = useState("");
@@ -499,8 +509,8 @@ export default function Timesheet() {
                 </CardContent>
             </Card>
 
-            {editOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+            {editOpen && createPortal(
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
                         <div className="flex items-center justify-between">
                             <div className="text-lg font-extrabold dark:text-slate-100">Edit entry</div>
@@ -587,9 +597,9 @@ export default function Timesheet() {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
-            {busy.on && (
+            {busy.on && createPortal(
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
                     <div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 shadow-xl dark:bg-slate-800">
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
@@ -598,7 +608,7 @@ export default function Timesheet() {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
         </div>
     );

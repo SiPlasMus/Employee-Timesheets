@@ -9,15 +9,17 @@ import AddLine from "./pages/AddLine";
 import Profile from "./pages/Profile";
 import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
 import Admin from "./pages/Admin";
+import Tasks from "./pages/Tasks";
 import Navbar from "./components/Navbar";
 
 const PAGE_ORDER = {
     "/login": -1,
     "/timesheet": 0,
-    "/add": 1,
-    "/analysis": 2,
-    "/admin": 3,
-    "/profile": 4,
+    "/tasks": 1,
+    "/add": 2,
+    "/analysis": 3,
+    "/admin": 4,
+    "/profile": 5,
 };
 
 const variants = {
@@ -57,6 +59,14 @@ function FrozenRoutes({ location }) {
                 element={
                     <ProtectedRoute>
                         <Timesheet />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/tasks"
+                element={
+                    <ProtectedRoute>
+                        <Tasks />
                     </ProtectedRoute>
                 }
             />
