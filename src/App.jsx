@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { isAdmin } from "./auth";
 import { AnimatePresence, motion } from "framer-motion";
 import Login from "./pages/Login";
 import Analysis from "./pages/Analysis";
@@ -47,7 +48,7 @@ function FrozenRoutes({ location }) {
                 path="/"
                 element={
                     <ProtectedRoute>
-                        <Navigate to="/timesheet" replace />
+                        <Navigate to={isAdmin() ? "/admin" : "/timesheet"} replace />
                     </ProtectedRoute>
                 }
             />
@@ -91,7 +92,7 @@ function FrozenRoutes({ location }) {
                     </ProtectedRoute>
                 }
             />
-            <Route path="*" element={<Navigate to="/timesheet" replace />} />
+            <Route path="*" element={<Navigate to={isAdmin() ? "/admin" : "/timesheet"} replace />} />
         </Routes>
     );
 }
