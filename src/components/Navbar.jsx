@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import { BarChart3, Bell, CalendarDays, ClipboardList, Moon, PlusCircle, ShieldCheck, Sun, User } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "../ui/ui";
 import { clearToken, isAdmin, isAuthed } from "../auth";
 import { useTheme } from "../hooks/useTheme";
@@ -22,15 +23,23 @@ function TabLink({ to, label, Icon }) {
         >
             {({ isActive }) => (
                 <>
-                    <div
-                        className={cn(
-                            "grid h-10 w-10 place-items-center rounded-2xl border",
-                            isActive
-                                ? "bg-slate-900 text-white border-slate-900 shadow-sm dark:bg-white dark:text-slate-900 dark:border-white"
-                                : "bg-white/80 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700"
+                    <div className="relative grid h-10 w-10 place-items-center rounded-2xl">
+                        {isActive && (
+                            <motion.div
+                                layoutId="tab-pill"
+                                className="absolute inset-0 rounded-2xl border bg-slate-900 border-slate-900 shadow-sm
+                                           dark:bg-white dark:border-white"
+                                transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                            />
                         )}
-                    >
-                        <Icon className="h-5 w-5" />
+                        {!isActive && (
+                            <div className="absolute inset-0 rounded-2xl border bg-white/80 border-slate-200
+                                            dark:bg-slate-800/80 dark:border-slate-700" />
+                        )}
+                        <Icon className={cn(
+                            "relative z-10 h-5 w-5",
+                            isActive ? "text-white dark:text-slate-900" : "text-slate-700 dark:text-slate-300"
+                        )} />
                     </div>
                     <div className="leading-none">{label}</div>
                 </>

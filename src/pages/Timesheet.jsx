@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import { api } from "../api";
 import { Card, CardContent, CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
+import TiltCard from "../ui/TiltCard";
+import { useToast } from "../components/Toast";
 import { ACTIVITY_TYPES } from "../components/activityTypes";
 
 function yyyymm(d = new Date()) {
@@ -125,10 +129,11 @@ function fmtDuration(mins) {
 }
 
 export default function Timesheet() {
+    const toast = useToast();
     const [month, setMonth] = useState(yyyymm());
     const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState("");
     const [items, setItems] = useState([]);
+    const [collapsedDays, setCollapsedDays] = useState(new Set());
     const [userId, setUserId] = useState(() => {
         // simplest: token payload decode is extra; for now let user enter, or store after login
         // If you already know empId equals userId, store it in localStorage during login later.
@@ -140,6 +145,14 @@ export default function Timesheet() {
     const [ccFilter, setCcFilter] = useState("all");   // cost center code or "all"
 
     const [editOpen, setEditOpen] = useState(false);
+
+    function toggleDay(date) {
+        setCollapsedDays(prev => {
+            const next = new Set(prev);
+            next.has(date) ? next.delete(date) : next.add(date);
+            return next;
+        });
+    }
 
     useEffect(() => {
         if (editOpen) {
@@ -158,7 +171,17 @@ export default function Timesheet() {
     const [editCC, setEditCC] = useState("");
     const [editMemo, setEditMemo] = useState("");
     const [saving, setSaving] = useState(false);
-    const [editErr, setEditErr] = useState("");
+    const [tiltEnabled, setTiltEnabled] = useState(
+        () => localStorage.getItem("et_timesheet_edit_tilt") !== "off"
+    );
+
+    function toggleTilt() {
+        setTiltEnabled(prev => {
+            const next = !prev;
+            localStorage.setItem("et_timesheet_edit_tilt", next ? "on" : "off");
+            return next;
+        });
+    }
 
     const [busy, setBusy] = useState({ on: false, text: "" });
 
@@ -175,17 +198,13 @@ export default function Timesheet() {
     }, []);
 
     async function load() {
-        setErr("");
         setLoading(true);
         try {
             if (!userId) throw new Error("No userId. Save empId after login (or set it manually).");
-
-            const r = await api.get(`/hana/timesheets/lines/${userId}`, {
-                params: { month },
-            });
+            const r = await api.get(`/hana/timesheets/lines/${userId}`, { params: { month } });
             setItems(r.data?.items || []);
         } catch (e) {
-            setErr(e?.response?.data?.error || e.message);
+            toast.error(e?.response?.data?.error || e.message);
             setItems([]);
         } finally {
             setLoading(false);
@@ -247,7 +266,6 @@ export default function Timesheet() {
     }, [filteredItems]);
 
     function openEdit(r) {
-        setEditErr("");
         setEditRow(r);
 
         setEditStart(sapIntToHHmm(r.StartTime));
@@ -262,12 +280,9 @@ export default function Timesheet() {
 
     async function saveEdit() {
         if (!editRow) return;
-        setEditErr("");
-
-        // tiny validations
-        if (!/^\d{2}:\d{2}$/.test(editStart)) return setEditErr("Start time must be HH:mm");
-        if (!/^\d{2}:\d{2}$/.test(editEnd)) return setEditErr("End time must be HH:mm");
-        if (!editActType || isNaN(Number(editActType))) return setEditErr("Activity type is required");
+        if (!/^\d{2}:\d{2}$/.test(editStart)) return toast.error("Start time must be HH:mm");
+        if (!/^\d{2}:\d{2}$/.test(editEnd))   return toast.error("End time must be HH:mm");
+        if (!editActType || isNaN(Number(editActType))) return toast.error("Activity type is required");
 
         setSaving(true);
         setBusy({ on: true, text: "Saving..." });
@@ -280,14 +295,13 @@ export default function Timesheet() {
                 activityType: Number(editActType),
                 costCenter: editCC || null,
                 memo: editMemo || null,
-                // you can also send other fields later if you want
             });
-
             setEditOpen(false);
             setEditRow(null);
-            await load(); // refresh list from HANA
+            toast.success("Entry saved");
+            await load();
         } catch (e) {
-            setEditErr(e?.response?.data?.error || e?.response?.data?.details || e.message || "Save failed");
+            toast.error(e?.response?.data?.error || e?.response?.data?.details || e.message || "Save failed");
         } finally {
             setSaving(false);
             setBusy({ on: false, text: "" });
@@ -298,12 +312,12 @@ export default function Timesheet() {
         const ok = window.confirm("Delete this entry?");
         if (!ok) return;
         setBusy({ on: true, text: "Deleting..." });
-
         try {
             await api.delete(`/timesheet/line/${r.LineID}`, { params: { month } });
+            toast.success("Entry deleted");
             await load();
         } catch (e) {
-            alert(e?.response?.data?.error || e?.response?.data?.details || e.message || "Delete failed");
+            toast.error(e?.response?.data?.error || e?.response?.data?.details || e.message || "Delete failed");
         } finally {
             setBusy({ on: false, text: "" });
         }
@@ -410,7 +424,6 @@ export default function Timesheet() {
                         </div>
                     </div>
 
-                    {err && <div className="mt-2 text-sm font-semibold text-rose-600">{err}</div>}
                 </CardHeader>
 
                 <CardContent>
@@ -419,6 +432,7 @@ export default function Timesheet() {
                     ) : (
                         <div className="grid gap-3">
                             {grouped.map(([date, rows]) => {
+                                const collapsed = collapsedDays.has(date);
                                 const dayMins = rows.reduce(
                                     (acc, r) => {
                                         const { gross, breakMins, net } = calcLineMins(r);
@@ -431,16 +445,37 @@ export default function Timesheet() {
                                 );
 
                                 return (
-                                    <div key={date} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
-                                        <div className="flex items-center justify-between">
-                                            <div className="font-extrabold">{date}</div>
-                                            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                                🕒{fmtDuration(dayMins.net)}
-                                                <span className="ml-2 text-slate-500 dark:text-slate-400">☕ {fmtBreak(dayMins.breaks)}</span>
+                                    <div key={date} className="rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                        {/* Day header — click to collapse */}
+                                        <button
+                                            onClick={() => toggleDay(date)}
+                                            className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                        >
+                                            <div className="font-extrabold text-slate-900 dark:text-slate-100">{date}</div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                    🕒{fmtDuration(dayMins.net)}
+                                                    <span className="ml-2 text-slate-500 dark:text-slate-400">☕ {fmtBreak(dayMins.breaks)}</span>
+                                                </div>
+                                                <motion.div
+                                                    animate={{ rotate: collapsed ? -90 : 0 }}
+                                                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                                >
+                                                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                                                </motion.div>
                                             </div>
-                                        </div>
+                                        </button>
 
-                                        <div className="mt-2 grid gap-2">
+                                        <AnimatePresence initial={false}>
+                                        {!collapsed && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                            style={{ overflow: "hidden" }}
+                                        >
+                                        <div className="grid gap-2 px-3 pb-3">
                                             {rows.map((r) => {
                                                 const { gross, breakMins, net } = calcLineMins(r);
                                                 return (
@@ -501,6 +536,9 @@ export default function Timesheet() {
                                                 );
                                             })}
                                         </div>
+                                        </motion.div>
+                                        )}
+                                        </AnimatePresence>
                                     </div>
                                 );
                             })}
@@ -510,16 +548,38 @@ export default function Timesheet() {
             </Card>
 
             {editOpen && createPortal(
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" style={{ perspective: 1200 }}>
+                    {React.createElement(
+                        tiltEnabled ? TiltCard : "div",
+                        { className: "w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl dark:bg-slate-900" },
+                        <>
                         <div className="flex items-center justify-between">
                             <div className="text-lg font-extrabold dark:text-slate-100">Edit entry</div>
-                            <button
-                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                                onClick={() => setEditOpen(false)}
-                            >
-                                ✖
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {/* Tilt toggle */}
+                                <button
+                                    onClick={toggleTilt}
+                                    title={tiltEnabled ? "Disable tilt" : "Enable tilt"}
+                                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                                >
+                                    <span className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
+                                        style={{
+                                            borderColor: tiltEnabled ? "#6366f1" : "#cbd5e1",
+                                        }}
+                                    >
+                                        {tiltEnabled && (
+                                            <span className="h-2 w-2 rounded-full bg-indigo-500" />
+                                        )}
+                                    </span>
+                                    Tilt
+                                </button>
+                                <button
+                                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                    onClick={() => setEditOpen(false)}
+                                >
+                                    ✖
+                                </button>
+                            </div>
                         </div>
 
                         <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -581,12 +641,6 @@ export default function Timesheet() {
                             </div>
                         </div>
 
-                        {editErr && (
-                            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-2 text-sm font-semibold text-rose-700">
-                                {editErr}
-                            </div>
-                        )}
-
                         <div className="mt-4 flex items-center justify-end gap-2">
                             <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saving}>
                                 Cancel
@@ -595,7 +649,8 @@ export default function Timesheet() {
                                 {saving ? "Saving..." : "Save"}
                             </Button>
                         </div>
-                    </div>
+                        </>
+                    )}
                 </div>
             , document.body)}
 

@@ -5,6 +5,7 @@ import { ACTIVITY_TYPES } from "../components/activityTypes";
 import { cn } from "../ui/ui";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
+import { useToast } from "../components/Toast";
 
 const SELECT_CLS =
     "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-slate-600";
@@ -74,10 +75,10 @@ function hhmmFromSapInt(v) {
 // Users Tab
 // ============================================================
 function UsersTab() {
+    const toast = useToast();
     const [filters, setFilters] = useState({ search: "", isActive: "", page: 1 });
     const [data, setData]       = useState(null);
     const [loading, setLoading] = useState(false);
-    const [err, setErr]         = useState("");
 
     const setSearch   = (v) => setFilters((f) => ({ ...f, search: v, page: 1 }));
     const setIsActive = (v) => setFilters((f) => ({ ...f, isActive: v, page: 1 }));
@@ -96,7 +97,7 @@ function UsersTab() {
                 const r = await api.get("/users", { params });
                 if (!cancelled) setData(r.data);
             } catch (e) {
-                if (!cancelled) setErr(e?.response?.data?.error || e.message);
+                if (!cancelled) toast.error(e?.response?.data?.error || e.message);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -137,10 +138,6 @@ function UsersTab() {
                     <option value="N">Inactive</option>
                 </select>
             </div>
-
-            {err && (
-                <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">{err}</div>
-            )}
 
             {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -231,6 +228,7 @@ function UsersTab() {
 // Hours Tab
 // ============================================================
 function HoursTab() {
+    const toast = useToast();
     const [month, setMonth] = useState(() => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -240,13 +238,11 @@ function HoursTab() {
 
     const [costCenters, setCostCenters] = useState([]);
 
-    // Raw fetched data (all lines for all users, unfilterd)
     const [rawUsers,   setRawUsers]   = useState([]);
-    const [rawLinesMap, setRawLinesMap] = useState(null); // Map<empId, lines[]>
+    const [rawLinesMap, setRawLinesMap] = useState(null);
 
     const [loading,  setLoading]  = useState(false);
     const [progress, setProgress] = useState({ done: 0, total: 0 });
-    const [err,      setErr]      = useState("");
     const abortRef = useRef(false);
 
     // Load cost centers once
@@ -268,7 +264,6 @@ function HoursTab() {
 
     async function loadData() {
         setLoading(true);
-        setErr("");
         setRawLinesMap(null);
         setRawUsers([]);
         abortRef.current = false;
@@ -302,7 +297,7 @@ function HoursTab() {
             setRawUsers(users);
             setRawLinesMap(linesMap);
         } catch (e) {
-            setErr(e?.response?.data?.error || e.message);
+            toast.error(e?.response?.data?.error || e.message);
         } finally {
             setLoading(false);
         }
@@ -629,10 +624,6 @@ function HoursTab() {
                     <Button variant="secondary" onClick={exportExcel}>Export Excel</Button>
                 )}
             </div>
-
-            {err && (
-                <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">{err}</div>
-            )}
 
             {/* Progress bar */}
             {loading && progress.total > 0 && (

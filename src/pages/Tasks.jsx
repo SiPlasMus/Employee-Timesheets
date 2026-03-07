@@ -5,6 +5,7 @@ import { isAdmin } from "../auth";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { cn } from "../ui/ui";
+import { useToast } from "../components/Toast";
 
 const STATUS_CONFIG = {
     pending:  { label: "Pending",  cls: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" },
@@ -67,25 +68,22 @@ function lockScroll() {
 
 // ---- User: task detail + update modal ----
 function UserTaskModal({ task, onClose, onSave, ccMap }) {
+    const toast = useToast();
     const [status, setStatus] = useState(task.STATUS || "pending");
     const [hours, setHours] = useState(minsToHours(task.TIME_SPENT_MINUTES));
     const [saving, setSaving] = useState(false);
-    const [err, setErr] = useState("");
 
     useEffect(lockScroll, []);
 
     async function save() {
         setSaving(true);
-        setErr("");
         try {
             const mins = Math.round(parseFloat(hours || 0) * 60);
-            await api.patch(`/task-assignments/${task.ASSIGNMENT_ID}`, {
-                status,
-                timeSpentMinutes: mins,
-            });
+            await api.patch(`/task-assignments/${task.ASSIGNMENT_ID}`, { status, timeSpentMinutes: mins });
             onSave({ ...task, STATUS: status, TIME_SPENT_MINUTES: mins });
+            toast.success("Task updated");
         } catch (e) {
-            setErr(e?.response?.data?.error || "Failed to save");
+            toast.error(e?.response?.data?.error || "Failed to save");
             setSaving(false);
         }
     }
@@ -148,12 +146,6 @@ function UserTaskModal({ task, onClose, onSave, ccMap }) {
                         />
                     </div>
                 </div>
-
-                {err && (
-                    <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-2 text-sm font-semibold text-rose-700">
-                        {err}
-                    </div>
-                )}
 
                 <div className="mt-4 flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
@@ -251,6 +243,7 @@ function AdminTaskModal({ task, onClose, ccMap }) {
 
 // ---- Admin: create task modal ----
 function CreateTaskModal({ onClose, onCreated }) {
+    const toast = useToast();
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [costCenter, setCostCenter] = useState("");
@@ -260,7 +253,6 @@ function CreateTaskModal({ onClose, onCreated }) {
     const [selectedEmpIds, setSelectedEmpIds] = useState([]);
     const [search, setSearch] = useState("");
     const [saving, setSaving] = useState(false);
-    const [err, setErr] = useState("");
 
     useEffect(lockScroll, []);
 
@@ -287,10 +279,9 @@ function CreateTaskModal({ onClose, onCreated }) {
     });
 
     async function submit() {
-        if (!title.trim()) return setErr("Title is required");
-        if (!selectedEmpIds.length) return setErr("Select at least one employee");
+        if (!title.trim()) return toast.error("Title is required");
+        if (!selectedEmpIds.length) return toast.error("Select at least one employee");
         setSaving(true);
-        setErr("");
         try {
             await api.post("/tasks", {
                 title: title.trim(),
@@ -299,9 +290,10 @@ function CreateTaskModal({ onClose, onCreated }) {
                 deadline: deadline || null,
                 empIds: selectedEmpIds,
             });
+            toast.success("Task created");
             onCreated();
         } catch (e) {
-            setErr(e?.response?.data?.error || "Failed to create task");
+            toast.error(e?.response?.data?.error || "Failed to create task");
             setSaving(false);
         }
     }
@@ -392,12 +384,6 @@ function CreateTaskModal({ onClose, onCreated }) {
                     </div>
                 </div>
 
-                {err && (
-                    <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-2 text-sm font-semibold text-rose-700">
-                        {err}
-                    </div>
-                )}
-
                 <div className="mt-4 flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
                     <Button onClick={submit} disabled={saving}>{saving ? "Creating..." : "Create Task"}</Button>
@@ -410,6 +396,7 @@ function CreateTaskModal({ onClose, onCreated }) {
 
 // ---- Main Tasks page ----
 export default function Tasks() {
+    const toast = useToast();
     const admin = isAdmin();
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -425,9 +412,12 @@ export default function Tasks() {
         setLoading(true);
         api.get("/tasks")
             .then(r => setTasks(r.data.items || []))
-            .catch(e => setErr(e?.response?.data?.error || "Failed to load tasks"))
+            .catch(e => {
+                toast.error(e?.response?.data?.error || "Failed to load tasks");
+                setErr("Failed to load tasks");
+            })
             .finally(() => setLoading(false));
-    }, []);
+    }, [toast]);
 
     useEffect(() => { load(); }, [load]);
 

@@ -11,6 +11,7 @@ import Input from "../ui/Input";
 import { ACTIVITY_TYPES } from "../components/activityTypes";
 import ClaudeAnalysis from "../components/ClaudeAnalysis";
 import { useTheme } from "../hooks/useTheme";
+import BorderTracer from "../ui/BorderTracer";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
@@ -82,9 +83,12 @@ const CHART_COLORS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, icon, bgClass, textClass }) {
+function KpiCard({ label, value, icon, bgClass, textClass, tracerIdx, tracerTotal }) {
     return (
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden relative">
+            {tracerIdx !== undefined && (
+                <BorderTracer index={tracerIdx} total={tracerTotal} rx={16} />
+            )}
             <div className="p-4">
                 <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg ${bgClass} ${textClass}`}>
                     {icon}
@@ -100,9 +104,12 @@ function KpiCard({ label, value, icon, bgClass, textClass }) {
     );
 }
 
-function ChartCard({ title, subtitle, children }) {
+function ChartCard({ title, subtitle, children, tracerIdx, tracerTotal }) {
     return (
-        <Card>
+        <Card className="relative">
+            {tracerIdx !== undefined && (
+                <BorderTracer index={tracerIdx} total={tracerTotal} rx={16} />
+            )}
             <CardHeader>
                 <div className="font-extrabold text-slate-900 dark:text-slate-100">{title}</div>
                 {subtitle && <div className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</div>}
@@ -272,6 +279,14 @@ export default function Analysis() {
     };
     const cursorStyle = { fill: isDark ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)" };
 
+    // ── Tracer indices (sequential block-to-block animation) ─────────────────
+    // KPI cards 0-3 are always visible; chart cards are conditional.
+    let _ti = 4;
+    const tracerDailyIdx = dailyChartData.length > 0 ? _ti++ : null;
+    const tracerActIdx   = actChartData.length  > 0 ? _ti++ : null;
+    const tracerCcIdx    = ccChartData.length   > 0 ? _ti++ : null;
+    const tracerTotal    = _ti; // total active blocks
+
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
@@ -317,6 +332,7 @@ export default function Analysis() {
                     icon="⏱"
                     bgClass="bg-indigo-100 dark:bg-indigo-900/30"
                     textClass="text-indigo-600 dark:text-indigo-400"
+                    tracerIdx={0} tracerTotal={tracerTotal}
                 />
                 <KpiCard
                     label="Working days"
@@ -324,6 +340,7 @@ export default function Analysis() {
                     icon="📅"
                     bgClass="bg-sky-100 dark:bg-sky-900/30"
                     textClass="text-sky-600 dark:text-sky-400"
+                    tracerIdx={1} tracerTotal={tracerTotal}
                 />
                 <KpiCard
                     label="Avg per day"
@@ -331,6 +348,7 @@ export default function Analysis() {
                     icon="⚡"
                     bgClass="bg-emerald-100 dark:bg-emerald-900/30"
                     textClass="text-emerald-600 dark:text-emerald-400"
+                    tracerIdx={2} tracerTotal={tracerTotal}
                 />
                 <KpiCard
                     label="Top activity"
@@ -338,6 +356,7 @@ export default function Analysis() {
                     icon="📌"
                     bgClass="bg-amber-100 dark:bg-amber-900/30"
                     textClass="text-amber-600 dark:text-amber-400"
+                    tracerIdx={3} tracerTotal={tracerTotal}
                 />
             </div>
 
@@ -347,6 +366,7 @@ export default function Analysis() {
                     <ChartCard
                         title="Daily Hours"
                         subtitle={`Avg ${avgDailyHours}h/day · dashed line = average`}
+                        tracerIdx={tracerDailyIdx} tracerTotal={tracerTotal}
                     >
                         <ResponsiveContainer width="100%" height={210}>
                             <BarChart
@@ -401,7 +421,7 @@ export default function Analysis() {
 
                 {/* Activity Donut */}
                 {actChartData.length > 0 && (
-                    <ChartCard title="By Activity" subtitle="Time distribution">
+                    <ChartCard title="By Activity" subtitle="Time distribution" tracerIdx={tracerActIdx} tracerTotal={tracerTotal}>
                         <ResponsiveContainer width="100%" height={250}>
                             <PieChart>
                                 <Pie
@@ -440,6 +460,7 @@ export default function Analysis() {
                     <ChartCard
                         title="By Cost Center"
                         subtitle={`Top ${ccChartData.length}`}
+                        tracerIdx={tracerCcIdx} tracerTotal={tracerTotal}
                     >
                         <ResponsiveContainer width="100%" height={250}>
                             <BarChart

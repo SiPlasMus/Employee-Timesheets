@@ -5,11 +5,12 @@ import { setToken, setRole } from "../auth";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { Card, CardHeader, CardContent } from "../ui/Card";
+import { useToast } from "../components/Toast";
 
 export default function Login() {
+    const toast = useToast();
     const [empId, setEmpId] = useState("");
     const [pin, setPin] = useState("");
-    const [err, setErr] = useState("");
     const [loading, setLoading] = useState(false);
 
     const nav = useNavigate();
@@ -17,7 +18,6 @@ export default function Login() {
 
     async function onSubmit(e) {
         e.preventDefault();
-        setErr("");
         setLoading(true);
         try {
             const r = await api.post("/auth/login", { empId, pin });
@@ -28,11 +28,11 @@ export default function Login() {
                 const defaultDest = r.data.role === "admin" ? "/admin" : "/timesheet";
                 nav(loc.state?.from || defaultDest, { replace: true });
             } else {
-                setErr("No token from server");
+                toast.error("No token from server");
             }
         } catch (e) {
             const isTimeout = e.code === "ECONNABORTED" || e.message?.includes("timeout");
-            setErr(
+            toast.error(
                 isTimeout
                     ? "Server is taking too long to respond. Please try again."
                     : e?.response?.data?.error || e.message || "Network error"
@@ -50,13 +50,11 @@ export default function Login() {
                         <div className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Employee Timesheets</div>
                         <div className="text-sm text-slate-500 dark:text-slate-400">Login with EmpID and PIN</div>
                     </CardHeader>
-
                     <CardContent>
                         <form onSubmit={onSubmit} className="grid gap-3">
                             <Input placeholder="EmpID" value={empId} onChange={(e) => setEmpId(e.target.value)} />
                             <Input placeholder="PIN" type="password" value={pin} onChange={(e) => setPin(e.target.value)} />
                             <Button disabled={loading}>{loading ? "Logging in..." : "Login"}</Button>
-                            {err && <div className="text-sm font-semibold text-rose-600 dark:text-rose-400">{err}</div>}
                         </form>
                     </CardContent>
                 </Card>

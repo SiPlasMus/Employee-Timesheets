@@ -11,6 +11,7 @@ import ProtectedRoute, { AdminRoute } from "./components/ProtectedRoute";
 import Admin from "./pages/Admin";
 import Tasks from "./pages/Tasks";
 import Navbar from "./components/Navbar";
+import { ToastProvider } from "./components/Toast";
 
 const PAGE_ORDER = {
     "/login": -1,
@@ -121,6 +122,7 @@ export default function App() {
     }
 
     return (
+        <ToastProvider>
         <>
             <Navbar />
             <div className="overflow-x-hidden">
@@ -139,5 +141,6 @@ export default function App() {
                 </AnimatePresence>
             </div>
         </>
+        </ToastProvider>
     );
 }

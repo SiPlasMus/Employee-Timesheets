@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { Card, CardContent, CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
-import Input from "../ui/Input.jsx"
+import Input from "../ui/Input.jsx";
+import { useToast } from "../components/Toast";
 
 function dash(v) {
     const s = String(v ?? "").trim();
@@ -10,24 +11,22 @@ function dash(v) {
 }
 
 export default function Profile({ onLogout }) {
+    const toast = useToast();
     const [loading, setLoading] = useState(false);
-    const [err, setErr] = useState("");
     const [me, setMe] = useState(null);
 
     const [showPin, setShowPin] = useState(false);
     const [oldPin, setOldPin] = useState("");
     const [newPin, setNewPin] = useState("");
     const [savingPin, setSavingPin] = useState(false);
-    const [pinMsg, setPinMsg] = useState("");
 
     async function load() {
-        setErr("");
         setLoading(true);
         try {
             const r = await api.get("/me");
-            setMe(r.data?.item || null)
+            setMe(r.data?.item || null);
         } catch (e) {
-            setErr(e?.response?.data?.error || e.message);
+            toast.error(e?.response?.data?.error || e.message);
             setMe(null);
         } finally {
             setLoading(false);
@@ -39,23 +38,19 @@ export default function Profile({ onLogout }) {
     }, []);
 
     async function changePin() {
-        setPinMsg("");
         const o = String(oldPin || "").trim();
         const n = String(newPin || "").trim();
-
-        if (n.length < 4) return setPinMsg("New PIN must be at least 4 characters.");
-        if (!o) return setPinMsg("Enter old PIN.");
-
+        if (n.length < 4) return toast.error("New PIN must be at least 4 characters.");
+        if (!o) return toast.error("Enter your old PIN.");
         setSavingPin(true);
         try {
             await api.post("/auth/change-pin", { oldPin: o, newPin: n });
-            setPinMsg("✅ PIN changed successfully.");
+            toast.success("PIN changed successfully");
             setOldPin("");
             setNewPin("");
-            // close after success (optional)
-            setTimeout(() => setShowPin(false), 600);
+            setTimeout(() => setShowPin(false), 400);
         } catch (e) {
-            setPinMsg(e?.response?.data?.error || e.message || "Error");
+            toast.error(e?.response?.data?.error || e.message || "Error");
         } finally {
             setSavingPin(false);
         }
@@ -98,7 +93,6 @@ export default function Profile({ onLogout }) {
                         </div>
                     </div>
 
-                    {err && <div className="mt-2 text-sm font-semibold text-rose-600">{err}</div>}
                 </CardHeader>
 
                 <CardContent>
@@ -177,12 +171,6 @@ export default function Profile({ onLogout }) {
                                         />
                                         <div className="mt-1 text-xs text-slate-500">Minimum 4 characters.</div>
                                     </div>
-
-                                    {pinMsg && (
-                                        <div className={`text-sm font-semibold ${pinMsg.startsWith("✅") ? "text-emerald-600" : "text-rose-600"}`}>
-                                            {pinMsg}
-                                        </div>
-                                    )}
 
                                     <div className="mt-2 flex gap-2">
                                         <Button variant="secondary" onClick={() => setShowPin(false)} disabled={savingPin}>
