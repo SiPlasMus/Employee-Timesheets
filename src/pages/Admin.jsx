@@ -89,7 +89,6 @@ function UsersTab() {
         const delay = filters.search ? 350 : 0;
         const t = setTimeout(async () => {
             setLoading(true);
-            setErr("");
             try {
                 const params = { page: filters.page, limit: 20 };
                 if (filters.search.trim()) params.search = filters.search.trim();
