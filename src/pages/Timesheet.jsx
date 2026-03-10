@@ -249,7 +249,9 @@ export default function Timesheet() {
             if (!map.has(d)) map.set(d, []);
             map.get(d).push(row);
         }
-        return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+        return Array.from(map.entries())
+            .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+            .map(([date, rows]) => [date, rows.slice().sort((a, b) => (a.StartTime ?? 0) - (b.StartTime ?? 0))]);
     }, [filteredItems]);
 
     const totals = useMemo(() => {
