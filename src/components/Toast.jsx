@@ -66,12 +66,12 @@ export function ToastProvider({ children }) {
         timers.current[id] = setTimeout(() => remove(id), duration);
     }, [remove]);
 
-    const toast = {
+    const toast = React.useMemo(() => ({
         success: (msg, dur)  => push(msg, "success", dur),
         error:   (msg, dur)  => push(msg, "error",   dur ?? 6000),
         info:    (msg, dur)  => push(msg, "info",    dur),
         warning: (msg, dur)  => push(msg, "warning", dur),
-    };
+    }), [push]);
 
     return (
         <ToastCtx.Provider value={toast}>

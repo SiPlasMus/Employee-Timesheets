@@ -42,3 +42,14 @@ export function getRole() {
 export function isAdmin() {
     return getRole() === "admin";
 }
+
+export function getEmpId() {
+    const token = getToken();
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return String(payload?.empId ?? '');
+    } catch {
+        return null;
+    }
+}

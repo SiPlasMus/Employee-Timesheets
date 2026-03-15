@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api";
-import { isAdmin } from "../auth";
+import { isAdmin, getEmpId } from "../auth";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { cn } from "../ui/ui";
 import { useToast } from "../components/Toast";
+import ChatPanel from "../components/ChatPanel";
 
 const STATUS_CONFIG = {
     pending:  { label: "Pending",  cls: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300" },
@@ -90,7 +91,7 @@ function UserTaskModal({ task, onClose, onSave, ccMap }) {
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <div className="text-lg font-extrabold dark:text-slate-100">{task.TITLE}</div>
@@ -147,6 +148,8 @@ function UserTaskModal({ task, onClose, onSave, ccMap }) {
                     </div>
                 </div>
 
+                <ChatPanel taskId={task.TASK_ID} currentEmpId={getEmpId()} />
+
                 <div className="mt-4 flex justify-end gap-2">
                     <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
                     <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
@@ -173,7 +176,7 @@ function AdminTaskModal({ task, onClose, ccMap }) {
 
     return createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-start justify-between gap-3">
                     <div>
                         <div className="text-lg font-extrabold dark:text-slate-100">{task.TITLE}</div>
@@ -231,6 +234,8 @@ function AdminTaskModal({ task, onClose, ccMap }) {
                         </div>
                     )}
                 </div>
+
+                <ChatPanel taskId={task.TASK_ID} currentEmpId={getEmpId()} />
 
                 <div className="mt-4 flex justify-end">
                     <Button variant="secondary" onClick={onClose}>Close</Button>
