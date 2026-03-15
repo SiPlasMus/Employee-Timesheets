@@ -4,7 +4,9 @@ import { getToken } from './auth';
 let _socket = null;
 
 export function getSocket() {
-    if (_socket) return _socket;
+    // If disconnected or token changed (e.g. after login), recreate
+    if (_socket && _socket.connected) return _socket;
+    if (_socket) { _socket.disconnect(); _socket = null; }
 
     // Strip /et path from VITE_API_URL to get the root server URL
     const apiUrl = import.meta.env.VITE_API_URL || '';
@@ -12,7 +14,7 @@ export function getSocket() {
 
     _socket = io(baseUrl, {
         auth: { token: getToken() },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         reconnection: true,
         reconnectionDelay: 1000,
     });
